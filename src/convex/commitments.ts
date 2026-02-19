@@ -71,6 +71,32 @@ export const createCommitment = mutation({
   },
 });
 
+// Get unique months (prefixes) for a company's commitments
+export const getCommitmentMonths = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const companyUser = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", args.companyId).eq("userId", userId)
+      )
+      .first();
+
+    if (!companyUser) return [];
+
+    const commitments = await ctx.db
+      .query("commitments")
+      .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
+      .collect();
+
+    const months = Array.from(new Set(commitments.map((c) => c.numberPrefix))).sort().reverse();
+    return months;
+  },
+});
+
 // Get commitments for a company
 export const getCommitments = query({
   args: {

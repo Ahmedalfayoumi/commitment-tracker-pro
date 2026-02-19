@@ -45,9 +45,17 @@ export default function CompanyDetail() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | undefined>();
   
+  const availableMonths = useQuery(api.commitments.getCommitmentMonths, 
+    companyId ? { companyId: companyId as Id<"companies"> } : "skip"
+  );
+
   const commitments = useQuery(
     api.commitments.getCommitments,
-    companyId ? { companyId: companyId as Id<"companies">, searchQuery, month: selectedMonth } : "skip"
+    companyId ? { 
+      companyId: companyId as Id<"companies">, 
+      searchQuery, 
+      month: selectedMonth === "all" ? undefined : selectedMonth 
+    } : "skip"
   );
 
   const createCommitment = useMutation(api.commitments.createCommitment);
@@ -309,13 +317,20 @@ export default function CompanyDetail() {
                       className="pr-10"
                     />
                   </div>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <Select 
+                    value={selectedMonth || "all"} 
+                    onValueChange={(val) => setSelectedMonth(val === "all" ? undefined : val)}
+                  >
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="تصفية حسب الشهر" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">جميع الأشهر</SelectItem>
-                      {/* Add month options dynamically */}
+                      {availableMonths?.map((month) => (
+                        <SelectItem key={month} value={month}>
+                          {month}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
