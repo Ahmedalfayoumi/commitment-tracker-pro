@@ -40,8 +40,13 @@ async function reportErrorToVly(errorData: {
     return;
   }
 
+  const monitoringUrl = import.meta.env.VITE_VLY_MONITORING_URL;
+  if (!monitoringUrl) {
+    return;
+  }
+
   try {
-    await fetch(import.meta.env.VITE_VLY_MONITORING_URL, {
+    await fetch(monitoringUrl, {
       method: "POST",
       body: JSON.stringify({
         ...errorData,
@@ -150,17 +155,8 @@ class ErrorBoundary extends React.Component<
   }
 
   render() {
-    if (this.state.hasError) {
-      // You can render any custom fallback UI
-      return (
-        <ErrorDialog
-          error={{
-            error: "An error occurred",
-            stack: "",
-          }}
-          setError={() => {}}
-        />
-      );
+    if (this.state.hasError && this.state.error) {
+      return <ErrorDialog error={this.state.error} setError={(error) => this.setState({ error, hasError: !!error })} />;
     }
 
     return this.props.children;
