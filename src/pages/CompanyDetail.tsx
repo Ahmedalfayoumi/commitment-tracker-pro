@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useParams, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Plus, DollarSign, FileText, Calendar, Filter, Search } from "lucide-react";
+import { ArrowRight, Plus, DollarSign, FileText, Calendar, Filter, Search, Settings, Upload, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -51,10 +52,28 @@ export default function CompanyDetail() {
 
   const createCommitment = useMutation(api.commitments.createCommitment);
   const createPayment = useMutation(api.payments.createPayment);
+  const updateCompany = useMutation(api.companies.updateCompany);
+  const generateUploadUrl = useMutation(api.companies.generateUploadUrl);
 
   const [isCommitmentDialogOpen, setIsCommitmentDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedCommitment, setSelectedCommitment] = useState<Id<"commitments"> | null>(null);
+
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({
+    primaryColor: company?.primaryColor || "#3b82f6",
+    secondaryColor: company?.secondaryColor || "#1e293b",
+  });
+
+  // Update settings form when company data loads
+  useEffect(() => {
+    if (company) {
+      setSettingsForm({
+        primaryColor: company.primaryColor || "#3b82f6",
+        secondaryColor: company.secondaryColor || "#1e293b",
+      });
+    }
+  }, [company]);
 
   const [commitmentForm, setCommitmentForm] = useState({
     dueDate: "",
@@ -70,6 +89,65 @@ export default function CompanyDetail() {
     paymentDate: "",
     notes: "",
   });
+
+  const validateFile = (file: File) => {
+    const validTypes = ["image/jpeg", "image/png", "image/jpg"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      toast.error("يرجى اختيار ملف بصيغة JPG أو PNG فقط");
+      return false;
+    }
+    if (file.size > maxSize) {
+      toast.error("حجم الملف يجب أن لا يتجاوز 5 ميجابايت");
+      return false;
+    }
+    return true;
+  };
+
+  const handleFileUpload = async (file: File, type: "logo" | "favicon") => {
+    if (!validateFile(file)) return;
+
+    try {
+      setIsUpdatingSettings(true);
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      await updateCompany({
+        companyId: companyId as Id<"companies">,
+        [type === "logo" ? "logoStorageId" : "faviconStorageId"]: storageId,
+      });
+
+      toast.success(`تم تحديث ${type === "logo" ? "الشعار" : "الأيقونة"} بنجاح`);
+    } catch (error) {
+      toast.error("حدث خطأ أثناء رفع الملف");
+      console.error(error);
+    } finally {
+      setIsUpdatingSettings(false);
+    }
+  };
+
+  const handleUpdateColors = async () => {
+    try {
+      setIsUpdatingSettings(true);
+      await updateCompany({
+        companyId: companyId as Id<"companies">,
+        primaryColor: settingsForm.primaryColor,
+        secondaryColor: settingsForm.secondaryColor,
+      });
+      toast.success("تم تحديث الألوان بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تحديث الألوان");
+      console.error(error);
+    } finally {
+      setIsUpdatingSettings(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -175,174 +253,296 @@ export default function CompanyDetail() {
             </div>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">إجمالي الالتزامات</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalCommitments.toFixed(2)} د.أ</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">المدفوع</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{totalPaid.toFixed(2)} د.أ</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">المتبقي</CardTitle>
-                <DollarSign className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{totalRemaining.toFixed(2)} د.أ</div>
-              </CardContent>
-            </Card>
-          </div>
+          <Tabs defaultValue="commitments" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+              <TabsTrigger value="commitments" className="gap-2">
+                <FileText className="h-4 w-4" />
+                الالتزامات
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                الإعدادات
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Filters and Actions */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="بحث في الالتزامات..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
-                />
+            <TabsContent value="commitments" className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">إجمالي الالتزامات</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{totalCommitments.toFixed(2)} د.أ</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">المدفوع</CardTitle>
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{totalPaid.toFixed(2)} د.أ</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">المتبقي</CardTitle>
+                    <DollarSign className="h-4 w-4 text-red-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{totalRemaining.toFixed(2)} د.أ</div>
+                  </CardContent>
+                </Card>
               </div>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="تصفية حسب الشهر" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع الأشهر</SelectItem>
-                  {/* Add month options dynamically */}
-                </SelectContent>
-              </Select>
-            </div>
-            <Dialog open={isCommitmentDialogOpen} onOpenChange={setIsCommitmentDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-5 w-5" />
-                  إضافة التزام جديد
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl" dir="rtl">
-                <DialogHeader>
-                  <DialogTitle>إضافة التزام جديد</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleCreateCommitment} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dueDate">تاريخ الاستحقاق *</Label>
-                      <Input
-                        id="dueDate"
-                        type="date"
-                        required
-                        value={commitmentForm.dueDate}
-                        onChange={(e) => setCommitmentForm({ ...commitmentForm, dueDate: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">المبلغ *</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        step="0.01"
-                        required
-                        value={commitmentForm.amount}
-                        onChange={(e) => setCommitmentForm({ ...commitmentForm, amount: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account">الحساب *</Label>
-                    <Input
-                      id="account"
-                      required
-                      value={commitmentForm.account}
-                      onChange={(e) => setCommitmentForm({ ...commitmentForm, account: e.target.value })}
-                      placeholder="مثال: ضريبة الدخل"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">الوصف *</Label>
-                    <Textarea
-                      id="description"
-                      required
-                      value={commitmentForm.description}
-                      onChange={(e) => setCommitmentForm({ ...commitmentForm, description: e.target.value })}
-                      placeholder="أدخل تفاصيل الالتزام"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCommitmentDialogOpen(false)}>
-                      إلغاء
-                    </Button>
-                    <Button type="submit">حفظ الالتزام</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
 
-          {/* Commitments List */}
-          <div className="space-y-4">
-            {commitments?.map((commitment) => (
-              <Card key={commitment._id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">{commitment.commitmentNumber}</h3>
-                        <Badge className={STATUS_COLORS[commitment.status]}>
-                          {STATUS_LABELS[commitment.status]}
-                        </Badge>
+              {/* Filters and Actions */}
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1 flex gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="بحث في الالتزامات..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pr-10"
+                    />
+                  </div>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="تصفية حسب الشهر" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع الأشهر</SelectItem>
+                      {/* Add month options dynamically */}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Dialog open={isCommitmentDialogOpen} onOpenChange={setIsCommitmentDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="h-5 w-5" />
+                      إضافة التزام جديد
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle>إضافة التزام جديد</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateCommitment} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dueDate">تاريخ الاستحقاق *</Label>
+                          <Input
+                            id="dueDate"
+                            type="date"
+                            required
+                            value={commitmentForm.dueDate}
+                            onChange={(e) => setCommitmentForm({ ...commitmentForm, dueDate: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="amount">المبلغ *</Label>
+                          <Input
+                            id="amount"
+                            type="number"
+                            step="0.01"
+                            required
+                            value={commitmentForm.amount}
+                            onChange={(e) => setCommitmentForm({ ...commitmentForm, amount: e.target.value })}
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{commitment.account}</p>
-                      <p className="text-sm mb-4">{commitment.description}</p>
-                      <div className="flex items-center gap-6 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>{new Date(commitment.dueDate).toLocaleDateString("ar-JO")}</span>
+                      <div className="space-y-2">
+                        <Label htmlFor="account">الحساب *</Label>
+                        <Input
+                          id="account"
+                          required
+                          value={commitmentForm.account}
+                          onChange={(e) => setCommitmentForm({ ...commitmentForm, account: e.target.value })}
+                          placeholder="مثال: ضريبة الدخل"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">الوصف *</Label>
+                        <Textarea
+                          id="description"
+                          required
+                          value={commitmentForm.description}
+                          onChange={(e) => setCommitmentForm({ ...commitmentForm, description: e.target.value })}
+                          placeholder="أدخل تفاصيل الالتزام"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCommitmentDialogOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button type="submit">حفظ الالتزام</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Commitments List */}
+              <div className="space-y-4">
+                {commitments?.map((commitment) => (
+                  <Card key={commitment._id}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold">{commitment.commitmentNumber}</h3>
+                            <Badge className={STATUS_COLORS[commitment.status]}>
+                              {STATUS_LABELS[commitment.status]}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{commitment.account}</p>
+                          <p className="text-sm mb-4">{commitment.description}</p>
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span>{new Date(commitment.dueDate).toLocaleDateString("ar-JO")}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-muted-foreground" />
+                              <span>المبلغ: {commitment.amount.toFixed(2)} د.أ</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-600">المدفوع: {commitment.paidAmount.toFixed(2)} د.أ</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-red-600">المتبقي: {(commitment.amount - commitment.paidAmount).toFixed(2)} د.أ</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span>المبلغ: {commitment.amount.toFixed(2)} د.أ</span>
+                        {commitment.status !== "paid" && commitment.status !== "cancelled" && (
+                          <Button
+                            onClick={() => {
+                              setSelectedCommitment(commitment._id);
+                              setIsPaymentDialogOpen(true);
+                            }}
+                            size="sm"
+                          >
+                            تسجيل دفعة
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Theme Colors */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      ألوان الهوية
+                    </CardTitle>
+                    <CardDescription>اختر ألوان السمة الخاصة بالشركة</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="primaryColor">اللون الأساسي</Label>
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded border" 
+                            style={{ backgroundColor: settingsForm.primaryColor }} 
+                          />
+                          <Input
+                            id="primaryColor"
+                            type="color"
+                            className="w-12 h-12 p-1 cursor-pointer"
+                            value={settingsForm.primaryColor}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, primaryColor: e.target.value })}
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-600">المدفوع: {commitment.paidAmount.toFixed(2)} د.أ</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-600">المتبقي: {(commitment.amount - commitment.paidAmount).toFixed(2)} د.أ</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="secondaryColor">اللون الثانوي</Label>
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded border" 
+                            style={{ backgroundColor: settingsForm.secondaryColor }} 
+                          />
+                          <Input
+                            id="secondaryColor"
+                            type="color"
+                            className="w-12 h-12 p-1 cursor-pointer"
+                            value={settingsForm.secondaryColor}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, secondaryColor: e.target.value })}
+                          />
                         </div>
                       </div>
                     </div>
-                    {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                      <Button
-                        onClick={() => {
-                          setSelectedCommitment(commitment._id);
-                          setIsPaymentDialogOpen(true);
-                        }}
-                        size="sm"
-                      >
-                        تسجيل دفعة
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <Button 
+                      onClick={handleUpdateColors} 
+                      disabled={isUpdatingSettings}
+                      className="w-full"
+                    >
+                      حفظ الألوان
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Assets Upload */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      الوسائط والشعار
+                    </CardTitle>
+                    <CardDescription>تحديث شعار الشركة وأيقونة الموقع (JPG/PNG, max 5MB)</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>شعار الشركة</Label>
+                        <div className="flex items-center gap-4">
+                          {company.logoUrl && (
+                            <img src={company.logoUrl} alt="Logo" className="w-12 h-12 rounded object-cover border" />
+                          )}
+                          <Input
+                            type="file"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "logo");
+                            }}
+                            disabled={isUpdatingSettings}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>أيقونة الموقع (Favicon)</Label>
+                        <div className="flex items-center gap-4">
+                          {company.faviconUrl && (
+                            <img src={company.faviconUrl} alt="Favicon" className="w-8 h-8 rounded object-cover border" />
+                          )}
+                          <Input
+                            type="file"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, "favicon");
+                            }}
+                            disabled={isUpdatingSettings}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Payment Dialog */}
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>

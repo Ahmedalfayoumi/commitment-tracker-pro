@@ -156,6 +156,8 @@ export const updateCompany = mutation({
     signatoryPhone: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
     faviconStorageId: v.optional(v.id("_storage")),
+    primaryColor: v.optional(v.string()),
+    secondaryColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

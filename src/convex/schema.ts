@@ -48,6 +48,8 @@ const schema = defineSchema(
       signatoryPhone: v.string(),
       logoStorageId: v.optional(v.id("_storage")),
       faviconStorageId: v.optional(v.id("_storage")),
+      primaryColor: v.optional(v.string()),
+      secondaryColor: v.optional(v.string()),
       ownerId: v.id("users"),
       isActive: v.boolean(),
     }).index("by_ownerId", ["ownerId"]),
