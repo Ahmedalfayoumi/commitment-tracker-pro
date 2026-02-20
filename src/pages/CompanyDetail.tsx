@@ -16,6 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SummaryCards } from "@/components/company-detail/SummaryCards";
+import { CommitmentFilters } from "@/components/company-detail/CommitmentFilters";
+import { CommitmentList } from "@/components/company-detail/CommitmentList";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -274,181 +277,28 @@ export default function CompanyDetail() {
             </TabsList>
 
             <TabsContent value="commitments" className="space-y-6">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">إجمالي الالتزامات</CardTitle>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalCommitments.toFixed(2)} د.أ</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">المدفوع</CardTitle>
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{totalPaid.toFixed(2)} د.أ</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">المتبقي</CardTitle>
-                    <DollarSign className="h-4 w-4 text-red-600" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{totalRemaining.toFixed(2)} د.أ</div>
-                  </CardContent>
-                </Card>
-              </div>
+              <SummaryCards 
+                totalCommitments={totalCommitments} 
+                totalPaid={totalPaid} 
+                totalRemaining={totalRemaining} 
+              />
 
-              {/* Filters and Actions */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1 flex gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="بحث في الالتزامات..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-10"
-                    />
-                  </div>
-                  <Select 
-                    value={selectedMonth || "all"} 
-                    onValueChange={(val) => setSelectedMonth(val === "all" ? undefined : val)}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="تصفية حسب الشهر" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع الأشهر</SelectItem>
-                      {availableMonths?.map((month) => (
-                        <SelectItem key={month} value={month}>
-                          {month}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Dialog open={isCommitmentDialogOpen} onOpenChange={setIsCommitmentDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="h-5 w-5" />
-                      إضافة التزام جديد
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl" dir="rtl">
-                    <DialogHeader>
-                      <DialogTitle>إضافة التزام جديد</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateCommitment} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="dueDate">تاريخ الاستحقاق *</Label>
-                          <Input
-                            id="dueDate"
-                            type="date"
-                            required
-                            value={commitmentForm.dueDate}
-                            onChange={(e) => setCommitmentForm({ ...commitmentForm, dueDate: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">المبلغ *</Label>
-                          <Input
-                            id="amount"
-                            type="number"
-                            step="0.01"
-                            required
-                            value={commitmentForm.amount}
-                            onChange={(e) => setCommitmentForm({ ...commitmentForm, amount: e.target.value })}
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="account">الحساب *</Label>
-                        <Input
-                          id="account"
-                          required
-                          value={commitmentForm.account}
-                          onChange={(e) => setCommitmentForm({ ...commitmentForm, account: e.target.value })}
-                          placeholder="مثال: ضريبة الدخل"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">الوصف *</Label>
-                        <Textarea
-                          id="description"
-                          required
-                          value={commitmentForm.description}
-                          onChange={(e) => setCommitmentForm({ ...commitmentForm, description: e.target.value })}
-                          placeholder="أدخل تفاصيل الالتزام"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setIsCommitmentDialogOpen(false)}>
-                          إلغاء
-                        </Button>
-                        <Button type="submit">حفظ الالتزام</Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <CommitmentFilters 
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                availableMonths={availableMonths}
+                onAddClick={() => setIsCommitmentDialogOpen(true)}
+              />
 
-              {/* Commitments List */}
-              <div className="space-y-4">
-                {commitments?.map((commitment) => (
-                  <Card key={commitment._id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold">{commitment.commitmentNumber}</h3>
-                            <Badge className={STATUS_COLORS[commitment.status]}>
-                              {STATUS_LABELS[commitment.status]}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">{commitment.account}</p>
-                          <p className="text-sm mb-4">{commitment.description}</p>
-                          <div className="flex items-center gap-6 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>{new Date(commitment.dueDate).toLocaleDateString("ar-JO")}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              <span>المبلغ: {commitment.amount.toFixed(2)} د.أ</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-green-600">المدفوع: {commitment.paidAmount.toFixed(2)} د.أ</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-red-600">المتبقي: {(commitment.amount - commitment.paidAmount).toFixed(2)} د.أ</span>
-                            </div>
-                          </div>
-                        </div>
-                        {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                          <Button
-                            onClick={() => {
-                              setSelectedCommitment(commitment._id);
-                              setIsPaymentDialogOpen(true);
-                            }}
-                            size="sm"
-                          >
-                            تسجيل دفعة
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <CommitmentList 
+                commitments={commitments as any}
+                onRecordPayment={(id) => {
+                  setSelectedCommitment(id);
+                  setIsPaymentDialogOpen(true);
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="settings">
@@ -558,6 +408,67 @@ export default function CompanyDetail() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Commitment Dialog */}
+          <Dialog open={isCommitmentDialogOpen} onOpenChange={setIsCommitmentDialogOpen}>
+            <DialogContent className="max-w-2xl" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>إضافة التزام جديد</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateCommitment} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">تاريخ الاستحقاق *</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      required
+                      value={commitmentForm.dueDate}
+                      onChange={(e) => setCommitmentForm({ ...commitmentForm, dueDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">المبلغ *</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      required
+                      value={commitmentForm.amount}
+                      onChange={(e) => setCommitmentForm({ ...commitmentForm, amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="account">الحساب *</Label>
+                  <Input
+                    id="account"
+                    required
+                    value={commitmentForm.account}
+                    onChange={(e) => setCommitmentForm({ ...commitmentForm, account: e.target.value })}
+                    placeholder="مثال: ضريبة الدخل"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">الوصف *</Label>
+                  <Textarea
+                    id="description"
+                    required
+                    value={commitmentForm.description}
+                    onChange={(e) => setCommitmentForm({ ...commitmentForm, description: e.target.value })}
+                    placeholder="أدخل تفاصيل الالتزام"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsCommitmentDialogOpen(false)}>
+                    إلغاء
+                  </Button>
+                  <Button type="submit">حفظ الالتزام</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           {/* Payment Dialog */}
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>

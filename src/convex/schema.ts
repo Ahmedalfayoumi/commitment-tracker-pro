@@ -85,7 +85,8 @@ const schema = defineSchema(
       createdBy: v.id("users"),
     })
       .index("by_companyId", ["companyId"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .index("by_companyId_and_numberPrefix", ["companyId", "numberPrefix"]),
 
     // Payments table
     payments: defineTable({

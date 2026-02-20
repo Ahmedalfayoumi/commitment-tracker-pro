@@ -90,7 +90,8 @@ export const getCommitmentMonths = query({
     const commitments = await ctx.db
       .query("commitments")
       .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
-      .collect();
+      .order("desc")
+      .take(1000);
 
     const months = Array.from(new Set(commitments.map((c) => c.numberPrefix))).sort().reverse();
     return months;
@@ -117,25 +118,26 @@ export const getCommitments = query({
 
     if (!companyUser) return [];
 
-    let commitments = await ctx.db
-      .query("commitments")
-      .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .collect();
-
-    // Filter by month if provided
+    let q = ctx.db.query("commitments");
+    
     if (args.month) {
-      commitments = commitments.filter((c) => c.numberPrefix === args.month);
+      q = q.withIndex("by_companyId_and_numberPrefix", (query) => 
+        query.eq("companyId", args.companyId).eq("numberPrefix", args.month)
+      );
+    } else {
+      q = q.withIndex("by_companyId", (query) => query.eq("companyId", args.companyId));
     }
+
+    let commitments = await q.order("desc").take(100);
 
     // Filter by search query
     if (args.searchQuery) {
-      const query = args.searchQuery.toLowerCase();
+      const search = args.searchQuery.toLowerCase();
       commitments = commitments.filter(
         (c) =>
-          c.commitmentNumber.toLowerCase().includes(query) ||
-          c.account.toLowerCase().includes(query) ||
-          c.description.toLowerCase().includes(query)
+          c.commitmentNumber.toLowerCase().includes(search) ||
+          c.account.toLowerCase().includes(search) ||
+          c.description.toLowerCase().includes(search)
       );
     }
 
