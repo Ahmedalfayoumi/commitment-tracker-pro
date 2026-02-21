@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import RegisterCompany from "./pages/RegisterCompany.tsx";
 import CompanyDetail from "./pages/CompanyDetail.tsx";
+import DashboardLayout from "./components/DashboardLayout.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -54,9 +55,14 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/register-company" element={<RegisterCompany />} />
-            <Route path="/company/:companyId" element={<CompanyDetail />} />
+            
+            {/* Authenticated Routes with Sidebar */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/register-company" element={<RegisterCompany />} />
+              <Route path="/company/:companyId" element={<CompanyDetail />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
