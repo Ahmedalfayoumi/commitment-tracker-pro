@@ -14,6 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { UserCreationSection } from "@/components/company-detail/UserCreationSection";
+import { RegisterCompanyFormData } from "@/components/register-company/types";
+import { CompanyBasicInfoSection } from "@/components/register-company/CompanyBasicInfoSection";
+import { SectorsSection } from "@/components/register-company/SectorsSection";
+import { AddressSection } from "@/components/register-company/AddressSection";
+import { SignatorySection } from "@/components/register-company/SignatorySection";
+import { LogoSection } from "@/components/register-company/LogoSection";
+import { RegisterCompanyActions } from "@/components/register-company/RegisterCompanyActions";
 
 const COMPANY_TYPES = [
   "شركة مساهمة عامة",
@@ -48,7 +55,7 @@ export default function RegisterCompany() {
   const registerCompany = useMutation(api.companies.registerCompany);
   const generateUploadUrl = useMutation(api.companies.generateUploadUrl);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterCompanyFormData>({
     nameEn: "",
     nameAr: "",
     companyType: "",
@@ -165,265 +172,30 @@ export default function RegisterCompany() {
 
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
-              {/* Company Names */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>معلومات الشركة الأساسية</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nameAr">اسم الشركة (عربي) *</Label>
-                      <Input
-                        id="nameAr"
-                        required
-                        value={formData.nameAr}
-                        onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                        placeholder="أدخل اسم الشركة بالعربية"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nameEn">اسم الشركة (إنجليزي) *</Label>
-                      <Input
-                        id="nameEn"
-                        required
-                        value={formData.nameEn}
-                        onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                        placeholder="Enter company name in English"
-                        dir="ltr"
-                      />
-                    </div>
-                  </div>
+              <CompanyBasicInfoSection
+                formData={formData}
+                setFormData={setFormData}
+                companyTypes={COMPANY_TYPES}
+              />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="companyType">نوع الشركة *</Label>
-                    <Select
-                      value={formData.companyType || undefined}
-                      onValueChange={(value) => setFormData({ ...formData, companyType: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر نوع الشركة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMPANY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* User Creation Section */}
               <UserCreationSection formData={formData} setFormData={setFormData} />
 
-              {/* Sectors */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>قطاعات الشركة</CardTitle>
-                  <CardDescription>اختر القطاعات التي تعمل بها الشركة</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {SECTORS.map((sector) => (
-                      <div key={sector.value} className="flex items-center space-x-2 space-x-reverse">
-                        <Checkbox
-                          id={sector.value}
-                          checked={formData.sectors.includes(sector.value)}
-                          onCheckedChange={() => handleSectorToggle(sector.value)}
-                        />
-                        <Label htmlFor={sector.value} className="cursor-pointer">
-                          {sector.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <SectorsSection
+                sectors={SECTORS}
+                selectedSectors={formData.sectors}
+                onToggle={handleSectorToggle}
+              />
 
-              {/* Address Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>تفاصيل العنوان</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="country">الدولة *</Label>
-                      <Input
-                        id="country"
-                        required
-                        value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                        placeholder="مثال: الأردن"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="city">المدينة *</Label>
-                      <Input
-                        id="city"
-                        required
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="مثال: عمان"
-                      />
-                    </div>
-                  </div>
+              <AddressSection formData={formData} setFormData={setFormData} />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="street">الشارع *</Label>
-                    <Input
-                      id="street"
-                      required
-                      value={formData.street}
-                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                      placeholder="أدخل اسم الشارع"
-                    />
-                  </div>
+              <SignatorySection formData={formData} setFormData={setFormData} />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="buildingName">اسم المبنى</Label>
-                      <Input
-                        id="buildingName"
-                        value={formData.buildingName}
-                        onChange={(e) => setFormData({ ...formData, buildingName: e.target.value })}
-                        placeholder="اختياري"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="buildingNumber">رقم المبنى</Label>
-                      <Input
-                        id="buildingNumber"
-                        value={formData.buildingNumber}
-                        onChange={(e) => setFormData({ ...formData, buildingNumber: e.target.value })}
-                        placeholder="اختياري"
-                      />
-                    </div>
-                  </div>
+              <LogoSection setLogoFile={setLogoFile} setFaviconFile={setFaviconFile} />
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="floor">الطابق</Label>
-                      <Input
-                        id="floor"
-                        value={formData.floor}
-                        onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                        placeholder="اختياري"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="officeNumber">رقم المكتب</Label>
-                      <Input
-                        id="officeNumber"
-                        value={formData.officeNumber}
-                        onChange={(e) => setFormData({ ...formData, officeNumber: e.target.value })}
-                        placeholder="اختياري"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">الهاتف *</Label>
-                      <Input
-                        id="phone"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+962 00 000 0000"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Authorized Signatory */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>المفوض بالتوقيع</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signatoryName">اسم المفوض *</Label>
-                      <Input
-                        id="signatoryName"
-                        required
-                        value={formData.signatoryName}
-                        onChange={(e) => setFormData({ ...formData, signatoryName: e.target.value })}
-                        placeholder="أدخل اسم المفوض بالتوقيع"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signatoryPhone">هاتف المفوض *</Label>
-                      <Input
-                        id="signatoryPhone"
-                        required
-                        value={formData.signatoryPhone}
-                        onChange={(e) => setFormData({ ...formData, signatoryPhone: e.target.value })}
-                        placeholder="+962 00 000 0000"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Logo & Favicon */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>شعار الشركة والأيقونة</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="logo">شعار الشركة</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="logo"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                        />
-                        <Upload className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="favicon">أيقونة الموقع (Favicon)</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="favicon"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setFaviconFile(e.target.files?.[0] || null)}
-                        />
-                        <Upload className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Submit Button */}
-              <div className="flex justify-end gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/dashboard")}
-                  disabled={isSubmitting}
-                >
-                  إلغاء
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2">
-                  {isSubmitting ? (
-                    <>جاري الحفظ...</>
-                  ) : (
-                    <>
-                      <Save className="h-5 w-5" />
-                      حفظ الشركة
-                    </>
-                  )}
-                </Button>
-              </div>
+              <RegisterCompanyActions
+                isSubmitting={isSubmitting}
+                onCancel={() => navigate("/dashboard")}
+              />
             </div>
           </form>
         </motion.div>

@@ -4,15 +4,15 @@ import { Infer, v } from "convex/values";
 
 // default user roles. can add / remove based on the project as needed
 export const ROLES = {
+  SUPERADMIN: "superadmin",
   ADMIN: "admin",
   USER: "user",
-  MEMBER: "member",
 } as const;
 
 export const roleValidator = v.union(
+  v.literal(ROLES.SUPERADMIN),
   v.literal(ROLES.ADMIN),
   v.literal(ROLES.USER),
-  v.literal(ROLES.MEMBER),
 );
 export type Role = Infer<typeof roleValidator>;
 
@@ -51,7 +51,7 @@ const schema = defineSchema(
       faviconStorageId: v.optional(v.id("_storage")),
       primaryColor: v.optional(v.string()),
       secondaryColor: v.optional(v.string()),
-      ownerId: v.id("users"),
+      ownerId: v.id("users"), // Reference to the dedicated admin/owner user
       isActive: v.boolean(),
     }).index("by_ownerId", ["ownerId"]),
 
@@ -68,7 +68,7 @@ const schema = defineSchema(
     // Commitments table
     commitments: defineTable({
       companyId: v.id("companies"),
-      commitmentNumber: v.string(),
+      commitmentNumber: v.string(), // Auto-numbered field (e.g., "COM-001")
       numberPrefix: v.string(),
       numberSequence: v.number(),
       dueDate: v.number(),
@@ -91,7 +91,7 @@ const schema = defineSchema(
 
     // Payments table
     payments: defineTable({
-      commitmentId: v.id("commitments"),
+      commitmentId: v.id("commitments"), // Reference to commitment
       companyId: v.id("companies"),
       amount: v.number(),
       paymentMethod: v.union(
@@ -108,7 +108,7 @@ const schema = defineSchema(
       .index("by_companyId", ["companyId"]),
   },
   {
-    schemaValidation: false,
+    schemaValidation: true,
   },
 );
 

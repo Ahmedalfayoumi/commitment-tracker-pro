@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RegisterCompanyFormData } from "@/components/register-company/types";
 
 interface UserCreationSectionProps {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: RegisterCompanyFormData;
+  setFormData: (data: RegisterCompanyFormData) => void;
 }
 
 export function UserCreationSection({ formData, setFormData }: UserCreationSectionProps) {
