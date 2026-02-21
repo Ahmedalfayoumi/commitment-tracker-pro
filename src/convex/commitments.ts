@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Create a new commitment
@@ -68,6 +68,65 @@ export const createCommitment = mutation({
     });
 
     return commitmentId;
+  },
+});
+
+// Internal mutation for bulk import
+export const createCommitmentInternal = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    dueDate: v.number(),
+    account: v.string(),
+    description: v.string(),
+    amount: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("postponed"),
+      v.literal("paid"),
+      v.literal("partialPaid"),
+      v.literal("cancelled")
+    ),
+  },
+  handler: async (ctx, args) => {
+    // This is called from an action, so we don't check auth here (the action should check it)
+    // But we need a creator ID. For imports, we'll use the first admin or a system ID if we had one.
+    // For now, let's just find the company owner.
+    const company = await ctx.db.get(args.companyId);
+    if (!company) throw new Error("Company not found");
+
+    // Generate commitment number (YYYY-MM-0001 format)
+    const now = new Date(args.dueDate);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const prefix = `${year}-${month}`;
+
+    const lastCommitment = await ctx.db
+      .query("commitments")
+      .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
+      .filter((q) => q.eq(q.field("numberPrefix"), prefix))
+      .order("desc")
+      .first();
+
+    let sequence = 1;
+    if (lastCommitment) {
+      sequence = lastCommitment.numberSequence + 1;
+    }
+
+    const commitmentNumber = `${prefix}-${String(sequence).padStart(4, "0")}`;
+
+    return await ctx.db.insert("commitments", {
+      companyId: args.companyId,
+      commitmentNumber,
+      numberPrefix: prefix,
+      numberSequence: sequence,
+      dueDate: args.dueDate,
+      account: args.account,
+      description: args.description,
+      amount: args.amount,
+      paidAmount: 0,
+      status: args.status,
+      createdBy: company.ownerId,
+    });
   },
 });
 

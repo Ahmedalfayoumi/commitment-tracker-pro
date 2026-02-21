@@ -15,6 +15,7 @@ import type * as auth_utils from "../auth/utils.js";
 import type * as commitments from "../commitments.js";
 import type * as companies from "../companies.js";
 import type * as debug from "../debug.js";
+import type * as excel from "../excel.js";
 import type * as http from "../http.js";
 import type * as payments from "../payments.js";
 import type * as seed from "../seed.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   commitments: typeof commitments;
   companies: typeof companies;
   debug: typeof debug;
+  excel: typeof excel;
   http: typeof http;
   payments: typeof payments;
   seed: typeof seed;

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useAction } from "convex/react";
+import * as XLSX from "xlsx";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, CreditCard } from "lucide-react";
+import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { Id } from "@/convex/_generated/dataModel";
+import { toast } from "sonner";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -36,6 +39,8 @@ export default function Commitments() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
+  const importCommitments = useAction(api.excel.importCommitments);
+  const [isImporting, setIsImporting] = useState(false);
 
   const commitments = useQuery(api.commitments.getAllUserCommitments, {
     searchQuery,
@@ -43,6 +48,56 @@ export default function Commitments() {
   });
 
   const companies = useQuery(api.companies.getUserCompanies);
+
+  const downloadTemplate = () => {
+    const template = [
+      {
+        "الحساب": "مثال: شركة الكهرباء",
+        "الوصف": "فاتورة شهر يناير",
+        "المبلغ": 150.50,
+        "تاريخ الاستحقاق": "2024-01-25",
+        "الحالة": "نشط"
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "commitments_template.xlsx");
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompanyId && companies?.length === 0) return;
+
+    const companyId = selectedCompanyId || (companies?.[0]?._id as Id<"companies">);
+    setIsImporting(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = (event.target?.result as string).split(",")[1];
+        const result = await importCommitments({
+          companyId,
+          fileData: base64,
+        });
+
+        if (result.success) {
+          toast.success(`تم استيراد ${result.importedCount} التزام بنجاح`);
+          if (result.errors) {
+            console.error("Import errors:", result.errors);
+            toast.warning("تم الاستيراد مع وجود بعض الأخطاء، راجع وحدة التحكم");
+          }
+        } else {
+          toast.error(`فشل الاستيراد: ${result.error}`);
+        }
+        setIsImporting(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error("حدث خطأ أثناء قراءة الملف");
+      setIsImporting(false);
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center">جاري التحميل...</div>;
   if (!isAuthenticated) return <Navigate to="/auth" />;
@@ -62,10 +117,29 @@ export default function Commitments() {
             </h1>
             <p className="text-muted-foreground mt-1">إدارة جميع الالتزامات المالية عبر شركاتك</p>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
-            <Plus className="h-5 w-5" />
-            إضافة التزام جديد
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={downloadTemplate} className="gap-2">
+              <Download className="h-4 w-4" />
+              تحميل النموذج
+            </Button>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleFileUpload}
+                disabled={isImporting}
+              />
+              <Button variant="outline" className="gap-2" disabled={isImporting}>
+                <Upload className="h-4 w-4" />
+                {isImporting ? "جاري الاستيراد..." : "استيراد من Excel"}
+              </Button>
+            </div>
+            <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+              <Plus className="h-5 w-5" />
+              إضافة التزام جديد
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
