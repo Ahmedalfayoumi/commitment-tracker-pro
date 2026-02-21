@@ -7,7 +7,7 @@ export const seedSuperAdmin = mutation({
     // 1. Check if superadmin already exists
     const existingSuperAdmin = await ctx.db
       .query("users")
-      .withIndex("email", (q) => q.eq("email", "superadmin@commitmenttracker.pro"))
+      .withIndex("username", (q) => q.eq("username", "superadmin"))
       .first();
 
     if (existingSuperAdmin) {
@@ -17,6 +17,7 @@ export const seedSuperAdmin = mutation({
     // 2. Create Superadmin User
     const userId = await ctx.db.insert("users", {
       name: "Super Admin",
+      username: "superadmin",
       email: "superadmin@commitmenttracker.pro",
       role: "admin",
     });
