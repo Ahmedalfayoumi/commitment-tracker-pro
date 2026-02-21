@@ -7,9 +7,15 @@ import { hashPassword } from "./auth/utils";
 export const seedSuperAdmin = action({
   args: {},
   handler: async (ctx) => {
-    // Re-implementing secure password hashing
-    const hashedPassword = await hashPassword("admin");
-    await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
+    try {
+      // Securely hash the password using the utility
+      const hashedPassword = await hashPassword("admin");
+      await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
+      return { success: true, message: "Admin seeded successfully" };
+    } catch (error) {
+      console.error("Seeding failed:", error);
+      throw error;
+    }
   },
 });
 
