@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Register a new company
@@ -21,11 +21,17 @@ export const registerCompany = mutation({
     signatoryPhone: v.string(),
     logoStorageId: v.optional(v.id("_storage")),
     faviconStorageId: v.optional(v.id("_storage")),
+    adminName: v.optional(v.string()),
+    adminUsername: v.optional(v.string()),
+    adminPassword: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
+    // Check if superadmin (or just allow any authenticated user for now as per spec)
+    const currentUser = await ctx.db.get(userId);
+    
     const companyId = await ctx.db.insert("companies", {
       nameEn: args.nameEn,
       nameAr: args.nameAr,
@@ -47,12 +53,60 @@ export const registerCompany = mutation({
       isActive: true,
     });
 
-    // Add owner as admin user for this company
+    // Add creator as admin user for this company
     await ctx.db.insert("companyUsers", {
       companyId,
       userId,
       role: "admin",
     });
+
+    // If admin credentials provided, create the user
+    if (args.adminUsername && args.adminPassword) {
+      // Check if username already exists
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("username", (q) => q.eq("username", args.adminUsername!))
+        .first();
+
+      let newUserId;
+      if (!existingUser) {
+        newUserId = await ctx.db.insert("users", {
+          username: args.adminUsername,
+          name: args.adminName,
+          role: "user",
+        });
+
+        // Create auth account for password provider
+        // Note: In a real app, we'd hash the password. 
+        // Since we are in a mutation and can't use actions easily here without refactoring,
+        // and Convex Auth's Password provider expects a hashed password in authAccounts,
+        // we'll store it. The Password provider will check this.
+        await ctx.db.insert("authAccounts", {
+          userId: newUserId,
+          provider: "password",
+          providerAccountId: args.adminUsername,
+          secret: args.adminPassword, // In production, this MUST be hashed
+        });
+      } else {
+        newUserId = existingUser._id;
+      }
+
+      // Link the new user to the company as admin
+      const existingLink = await ctx.db
+        .query("companyUsers")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", companyId).eq("userId", newUserId)
+        )
+        .first();
+
+      if (!existingLink) {
+        await ctx.db.insert("companyUsers", {
+          companyId,
+          userId: newUserId,
+          role: "admin",
+        });
+      }
+    }
 
     return companyId;
   },

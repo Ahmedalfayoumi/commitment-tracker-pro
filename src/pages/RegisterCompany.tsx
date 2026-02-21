@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { UserCreationSection } from "@/components/company-detail/UserCreationSection";
 
 const COMPANY_TYPES = [
   "شركة مساهمة عامة",
@@ -62,6 +63,9 @@ export default function RegisterCompany() {
     phone: "",
     signatoryName: "",
     signatoryPhone: "",
+    adminName: "",
+    adminUsername: "",
+    adminPassword: "",
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -211,6 +215,9 @@ export default function RegisterCompany() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* User Creation Section */}
+              <UserCreationSection formData={formData} setFormData={setFormData} />
 
               {/* Sectors */}
               <Card>

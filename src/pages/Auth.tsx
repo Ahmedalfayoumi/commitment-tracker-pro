@@ -24,7 +24,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const isLoginDisabled = true; // Set to true to disable login form
+  const isLoginDisabled = false; // Re-enabled for testing the new user creation
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
