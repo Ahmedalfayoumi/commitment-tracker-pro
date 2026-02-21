@@ -50,6 +50,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
+  const handleGuestSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("anonymous");
+      toast.success("تم الدخول كضيف بنجاح");
+    } catch (error) {
+      console.error("Guest sign in error:", error);
+      toast.error("حدث خطأ أثناء الدخول كضيف");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -74,7 +87,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>تنبيه</AlertTitle>
               <AlertDescription>
-                تسجيل الدخول معطل حالياً حتى إشعار آخر.
+                تسجيل الدخول معطل حالياً حتى إشعار آخر. يمكنك الدخول كضيف.
               </AlertDescription>
             </Alert>
           )}
@@ -91,6 +104,24 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "دخول"}
             </Button>
           </form>
+
+          <div className="relative w-full py-2">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">أو</span>
+            </div>
+          </div>
+
+          <Button 
+            variant="secondary" 
+            className="w-full gap-2" 
+            onClick={handleGuestSignIn} 
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "الدخول كضيف (بدون حساب)"}
+          </Button>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <div className="relative w-full">

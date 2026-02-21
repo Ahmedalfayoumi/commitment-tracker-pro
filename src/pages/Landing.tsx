@@ -11,9 +11,28 @@ import {
   CalendarDays,
   FileText
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 export default function Landing() {
+  const { isAuthenticated, signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const handleStartNow = async () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+      return;
+    }
+    try {
+      await signIn("anonymous");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Guest access error:", error);
+      toast.error("حدث خطأ أثناء محاولة الدخول");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden" dir="rtl">
       {/* Navigation */}
@@ -29,9 +48,7 @@ export default function Landing() {
             <Link to="/auth">
               <Button variant="ghost">تسجيل الدخول</Button>
             </Link>
-            <Link to="/auth">
-              <Button>ابدأ الآن</Button>
-            </Link>
+            <Button onClick={handleStartNow}>ابدأ الآن</Button>
           </div>
         </div>
       </nav>
@@ -52,11 +69,9 @@ export default function Landing() {
               نظام متكامل لإدارة الشركات والالتزامات المالية الشهرية. تتبع المدفوعات، راقب التدفقات النقدية، ونظم حساباتك في مكان واحد.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/auth">
-                <Button size="lg" className="h-14 px-8 text-lg gap-2">
-                  ابدأ تجربتك المجانية <ArrowRight className="h-5 w-5 rotate-180" />
-                </Button>
-              </Link>
+              <Button size="lg" className="h-14 px-8 text-lg gap-2" onClick={handleStartNow}>
+                ابدأ تجربتك المجانية <ArrowRight className="h-5 w-5 rotate-180" />
+              </Button>
               <Button size="lg" variant="outline" className="h-14 px-8 text-lg">
                 شاهد العرض التجريبي
               </Button>
