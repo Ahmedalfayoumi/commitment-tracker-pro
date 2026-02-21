@@ -68,14 +68,28 @@ export const adminResetPassword = mutation({
   args: {
     userId: v.id("users"),
     newPassword: v.string(),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db.get(currentUserId);
-    if (currentUser?.role !== ROLES.ADMIN) {
-      throw new Error("Only system admins can reset passwords");
+    const isSystemAdmin = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.SUPERADMIN;
+
+    let isCompanyAdmin = false;
+    if (args.companyId) {
+      const companyUser = await ctx.db
+        .query("companyUsers")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", args.companyId!).eq("userId", currentUserId)
+        )
+        .first();
+      isCompanyAdmin = companyUser?.role === "admin";
+    }
+
+    if (!isSystemAdmin && !isCompanyAdmin) {
+      throw new Error("Only system admins or company admins can reset passwords");
     }
 
     await ctx.scheduler.runAfter(0, internal.users.hashAndSavePassword, {

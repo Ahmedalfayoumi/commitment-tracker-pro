@@ -2,8 +2,9 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Outlet } from "react-router";
+import { ReactNode } from "react";
 
-export default function DashboardLayout() {
+export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -32,7 +33,7 @@ export default function DashboardLayout() {
             <div className="flex-1" />
           </header>
           <main className="flex-1 overflow-y-auto">
-            <Outlet />
+            {children ?? <Outlet />}
           </main>
         </SidebarInset>
       </div>

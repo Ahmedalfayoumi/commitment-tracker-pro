@@ -294,7 +294,7 @@ export const getPendingCommitments = query({
   },
 });
 
-// Update commitment
+// Update a commitment
 export const updateCommitment = mutation({
   args: {
     commitmentId: v.id("commitments"),
@@ -302,15 +302,13 @@ export const updateCommitment = mutation({
     account: v.optional(v.string()),
     description: v.optional(v.string()),
     amount: v.optional(v.number()),
-    status: v.optional(
-      v.union(
-        v.literal("active"),
-        v.literal("postponed"),
-        v.literal("paid"),
-        v.literal("partialPaid"),
-        v.literal("cancelled")
-      )
-    ),
+    status: v.optional(v.union(
+      v.literal("active"),
+      v.literal("postponed"),
+      v.literal("paid"),
+      v.literal("partialPaid"),
+      v.literal("cancelled")
+    )),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -319,6 +317,9 @@ export const updateCommitment = mutation({
     const commitment = await ctx.db.get(args.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
 
+    const currentUser = await ctx.db.get(userId);
+    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+
     const companyUser = await ctx.db
       .query("companyUsers")
       .withIndex("by_companyId_and_userId", (q) =>
@@ -326,7 +327,9 @@ export const updateCommitment = mutation({
       )
       .first();
 
-    if (!companyUser) throw new Error("Unauthorized");
+    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
+      throw new Error("Only admins can update commitments");
+    }
 
     const { commitmentId, ...updates } = args;
     await ctx.db.patch(commitmentId, updates);
@@ -335,7 +338,7 @@ export const updateCommitment = mutation({
   },
 });
 
-// Delete commitment
+// Delete a commitment
 export const deleteCommitment = mutation({
   args: { commitmentId: v.id("commitments") },
   handler: async (ctx, args) => {
@@ -345,6 +348,9 @@ export const deleteCommitment = mutation({
     const commitment = await ctx.db.get(args.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
 
+    const currentUser = await ctx.db.get(userId);
+    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+
     const companyUser = await ctx.db
       .query("companyUsers")
       .withIndex("by_companyId_and_userId", (q) =>
@@ -352,8 +358,21 @@ export const deleteCommitment = mutation({
       )
       .first();
 
-    if (!companyUser) throw new Error("Unauthorized");
+    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
+      throw new Error("Only admins can delete commitments");
+    }
+
+    // Delete associated payments
+    const payments = await ctx.db
+      .query("payments")
+      .withIndex("by_commitmentId", (q) => q.eq("commitmentId", args.commitmentId))
+      .collect();
+
+    for (const payment of payments) {
+      await ctx.db.delete(payment._id);
+    }
 
     await ctx.db.delete(args.commitmentId);
+    return { success: true };
   },
 });

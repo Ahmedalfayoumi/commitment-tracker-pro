@@ -304,6 +304,7 @@ export function CompanyUsersSection({
         isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         user={selectedUserToEdit}
+        companyId={companyId}
       />
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

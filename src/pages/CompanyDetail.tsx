@@ -191,8 +191,8 @@ export default function CompanyDetail() {
         <PaymentDialog
           isOpen={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
-          commitmentId={selectedCommitmentId}
-          defaultAmount={amountDue}
+          commitmentId={selectedCommitmentId ?? undefined}
+          amountDue={amountDue}
         />
       </motion.div>
     </div>

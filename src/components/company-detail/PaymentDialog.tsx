@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,60 +13,79 @@ import { toast } from "sonner";
 interface PaymentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  commitmentId: Id<"commitments"> | null;
-  defaultAmount?: number; // Added to allow pre-filling
+  commitmentId?: Id<"commitments">;
+  amountDue?: number;
+  payment?: any; // Added payment prop for editing
 }
 
-export function PaymentDialog({ isOpen, onOpenChange, commitmentId, defaultAmount }: PaymentDialogProps) {
+export function PaymentDialog({
+  isOpen,
+  onOpenChange,
+  commitmentId,
+  amountDue,
+  payment, // Destructure payment
+}: PaymentDialogProps) {
   const createPayment = useMutation(api.payments.createPayment);
-  const [isLoading, setIsLoading] = useState(false);
-  const [form, setForm] = useState({
-    amount: "",
-    paymentMethod: "cash" as const,
-    paymentDate: new Date().toISOString().split("T")[0],
-    notes: "",
-  });
+  const updatePayment = useMutation(api.payments.updatePayment); // Added update mutation
+  
+  const [amount, setAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("cash");
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date());
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update amount when defaultAmount or isOpen changes
   useEffect(() => {
-    if (isOpen && defaultAmount !== undefined) {
-      setForm(prev => ({ ...prev, amount: defaultAmount.toString() }));
+    if (payment) {
+      setAmount(payment.amount.toString());
+      setPaymentMethod(payment.paymentMethod);
+      setPaymentDate(new Date(payment.paymentDate));
+      setNotes(payment.notes || "");
+    } else if (amountDue !== undefined) {
+      setAmount(amountDue.toString());
     }
-  }, [isOpen, defaultAmount]);
+  }, [payment, amountDue, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commitmentId) return;
-    setIsLoading(true);
+    if (!payment && !commitmentId) return;
+
+    setIsSubmitting(true);
     try {
-      await createPayment({
-        commitmentId,
-        amount: parseFloat(form.amount),
-        paymentMethod: form.paymentMethod,
-        paymentDate: new Date(form.paymentDate).getTime(),
-        notes: form.notes,
-      });
-      toast.success("تم تسجيل الدفعة بنجاح");
+      if (payment) {
+        await updatePayment({
+          paymentId: payment._id,
+          amount: parseFloat(amount),
+          paymentMethod: paymentMethod as any,
+          paymentDate: paymentDate.getTime(),
+          notes,
+        });
+        toast.success("تم تحديث الدفعة بنجاح");
+      } else {
+        await createPayment({
+          commitmentId: commitmentId!,
+          amount: parseFloat(amount),
+          paymentMethod: paymentMethod as any,
+          paymentDate: paymentDate.getTime(),
+          notes,
+        });
+        toast.success("تم تسجيل الدفعة بنجاح");
+      }
       onOpenChange(false);
-      setForm({
-        amount: "",
-        paymentMethod: "cash",
-        paymentDate: "",
-        notes: "",
-      });
     } catch (error) {
-      toast.error("حدث خطأ أثناء تسجيل الدفعة");
       console.error(error);
+      toast.error("حدث خطأ أثناء العملية");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl">
+      <DialogContent className="sm:max-w-[425px]" dir="rtl">
         <DialogHeader>
-          <DialogTitle>تسجيل دفعة</DialogTitle>
+          <DialogTitle className="text-right">
+            {payment ? "تعديل دفعة" : "تسجيل دفعة جديدة"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -76,18 +95,18 @@ export function PaymentDialog({ isOpen, onOpenChange, commitmentId, defaultAmoun
               type="number"
               step="0.01"
               required
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">طريقة الدفع *</Label>
             <Select
-              value={form.paymentMethod}
-              onValueChange={(value: any) => setForm({ ...form, paymentMethod: value })}
-              disabled={isLoading}
+              value={paymentMethod}
+              onValueChange={(value: any) => setPaymentMethod(value)}
+              disabled={isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -106,29 +125,26 @@ export function PaymentDialog({ isOpen, onOpenChange, commitmentId, defaultAmoun
               id="paymentDate"
               type="date"
               required
-              value={form.paymentDate}
-              onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
-              disabled={isLoading}
+              value={paymentDate.toISOString().split("T")[0]}
+              onChange={(e) => setPaymentDate(new Date(e.target.value))}
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">ملاحظات</Label>
             <Textarea
               id="notes"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="ملاحظات إضافية (اختياري)"
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-              إلغاء
+          <DialogFooter className="pt-4">
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "جاري الحفظ..." : (payment ? "حفظ التغييرات" : "تسجيل الدفعة")}
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "جاري الحفظ..." : "حفظ الدفعة"}
-            </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

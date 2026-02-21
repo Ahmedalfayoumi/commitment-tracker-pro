@@ -25,6 +25,7 @@ import { KeyRound } from "lucide-react";
 interface UserEditDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  companyId?: Id<"companies">;
   user: {
     _id: Id<"users">;
     name: string;
@@ -37,6 +38,7 @@ interface UserEditDialogProps {
 export function UserEditDialog({
   isOpen,
   onOpenChange,
+  companyId,
   user,
 }: UserEditDialogProps) {
   const updateCompanyUser = useMutation(api.companies.updateCompanyUser);
@@ -70,6 +72,7 @@ export function UserEditDialog({
         await resetPassword({
           userId: user._id,
           newPassword,
+          companyId,
         });
       }
 
