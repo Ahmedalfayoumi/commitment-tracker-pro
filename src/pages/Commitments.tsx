@@ -198,6 +198,16 @@ export default function Commitments() {
                     </div>
                     <p className="font-medium">{commitment.account}</p>
                     <p className="text-sm text-muted-foreground">{commitment.description}</p>
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">المدفوع:</span>
+                        <span className="text-green-600 font-medium">{formatAmount(commitment.paidAmount || 0)} د.أ</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">المتبقي:</span>
+                        <span className="text-red-600 font-medium">{formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ</span>
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-col md:items-end justify-between gap-4">
                     <div className="text-left md:text-right">

@@ -70,7 +70,11 @@ export default function CompanyDetail() {
 
   const [isCommitmentDialogOpen, setIsCommitmentDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedCommitment, setSelectedCommitment] = useState<Id<"commitments"> | null>(null);
+  const [selectedCommitmentId, setSelectedCommitmentId] = useState<Id<"commitments"> | null>(null);
+
+  // Find the selected commitment to get its remaining amount
+  const selectedCommitment = commitments?.find(c => c._id === selectedCommitmentId);
+  const amountDue = selectedCommitment ? selectedCommitment.amount - selectedCommitment.paidAmount : 0;
 
   if (isLoading) {
     return (
@@ -160,7 +164,7 @@ export default function CompanyDetail() {
             <CommitmentList
               commitments={commitments as any}
               onRecordPayment={(id) => {
-                setSelectedCommitment(id);
+                setSelectedCommitmentId(id);
                 setIsPaymentDialogOpen(true);
               }}
             />
@@ -187,7 +191,8 @@ export default function CompanyDetail() {
         <PaymentDialog
           isOpen={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
-          commitmentId={selectedCommitment}
+          commitmentId={selectedCommitmentId}
+          defaultAmount={amountDue}
         />
       </motion.div>
     </div>

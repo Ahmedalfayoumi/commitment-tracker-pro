@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -14,17 +14,25 @@ interface PaymentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   commitmentId: Id<"commitments"> | null;
+  defaultAmount?: number; // Added to allow pre-filling
 }
 
-export function PaymentDialog({ isOpen, onOpenChange, commitmentId }: PaymentDialogProps) {
+export function PaymentDialog({ isOpen, onOpenChange, commitmentId, defaultAmount }: PaymentDialogProps) {
   const createPayment = useMutation(api.payments.createPayment);
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({
     amount: "",
     paymentMethod: "cash" as const,
-    paymentDate: "",
+    paymentDate: new Date().toISOString().split("T")[0],
     notes: "",
   });
+
+  // Update amount when defaultAmount or isOpen changes
+  useEffect(() => {
+    if (isOpen && defaultAmount !== undefined) {
+      setForm(prev => ({ ...prev, amount: defaultAmount.toString() }));
+    }
+  }, [isOpen, defaultAmount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

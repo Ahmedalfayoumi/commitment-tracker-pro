@@ -36,6 +36,17 @@ export default function Payments() {
   const pendingCommitments = useQuery(api.commitments.getPendingCommitments);
   const createPayment = useMutation(api.payments.createPayment);
 
+  // Pre-fill amount when commitment changes
+  useEffect(() => {
+    if (form.commitmentId && pendingCommitments) {
+      const selected = pendingCommitments.find(c => c._id === form.commitmentId);
+      if (selected) {
+        const amountDue = selected.amount - (selected.paidAmount || 0);
+        setForm(prev => ({ ...prev, amount: amountDue.toString() }));
+      }
+    }
+  }, [form.commitmentId, pendingCommitments]);
+
   useEffect(() => {
     if (initialCommitmentId) {
       setForm(prev => ({ ...prev, commitmentId: initialCommitmentId }));
