@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RegisterCompanyFormData } from "@/components/register-company/types";
+import type { RegisterCompanyFormData } from "@/components/register-company/types";
 
 interface SignatorySectionProps {
   formData: RegisterCompanyFormData;
