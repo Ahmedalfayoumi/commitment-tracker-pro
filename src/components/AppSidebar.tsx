@@ -24,6 +24,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarSeparator,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -35,6 +36,8 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const { signOut } = useAuth();
@@ -62,7 +65,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar side="right" className="border-l">
+    <Sidebar collapsible="icon" className="border-l" dir="rtl">
       <SidebarHeader className="p-4">
         <Link to="/dashboard" className="flex items-center gap-3 px-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -131,43 +134,20 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="w-full justify-start gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.image} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user?.username?.substring(0, 2).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start text-right">
-                    <span className="text-sm font-medium truncate max-w-[120px]">
-                      {user?.username || "مستخدم"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">الحساب الشخصي</span>
-                  </div>
-                  <ChevronLeft className="mr-auto h-4 w-4 text-muted-foreground" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="left" align="end" className="w-56">
-                <DropdownMenuLabel>حسابي</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 cursor-pointer">
-                  <User className="h-4 w-4" />
-                  <span>الملف الشخصي</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 cursor-pointer">
-                  <Settings className="h-4 w-4" />
-                  <span>الإعدادات</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter className="p-4 border-t">
+        <div className="flex flex-col gap-2">
+          <ChangePasswordDialog />
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => signOut()}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>تسجيل الخروج</span>
+          </Button>
+        </div>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
