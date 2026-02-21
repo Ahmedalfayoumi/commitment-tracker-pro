@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import * as XLSX from "xlsx";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet, Eye, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -39,7 +41,11 @@ export default function Commitments() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
+  const [editingCommitment, setEditingCommitment] = useState<any>(null);
+  const [viewingCommitment, setViewingCommitment] = useState<any>(null);
+  
   const importCommitments = useAction(api.excel.importCommitments);
+  const deleteCommitment = useMutation(api.commitments.deleteCommitment);
   const [isImporting, setIsImporting] = useState(false);
 
   const commitments = useQuery(api.commitments.getAllUserCommitments, {
@@ -48,6 +54,15 @@ export default function Commitments() {
   });
 
   const companies = useQuery(api.companies.getUserCompanies);
+
+  const handleDelete = async (id: Id<"commitments">) => {
+    try {
+      await deleteCommitment({ commitmentId: id });
+      toast.success("تم حذف الالتزام بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء حذف الالتزام");
+    }
+  };
 
   const downloadTemplate = () => {
     const template = [
@@ -170,7 +185,7 @@ export default function Commitments() {
             <Card key={commitment._id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-lg">{commitment.commitmentNumber}</span>
                       <Badge className={STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]}>
@@ -192,7 +207,37 @@ export default function Commitments() {
                         تاريخ الاستحقاق: {new Date(commitment.dueDate).toLocaleDateString("ar-JO")}
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => setViewingCommitment(commitment)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setEditingCommitment(commitment)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent dir="rtl">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="gap-2">
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(commitment._id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              حذف
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       {commitment.status !== "paid" && commitment.status !== "cancelled" && (
                         <Button 
                           size="sm" 
@@ -203,13 +248,6 @@ export default function Commitments() {
                           تسجيل دفعة
                         </Button>
                       )}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate(`/company/${commitment.companyId}`)}
-                      >
-                        عرض الشركة
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -224,12 +262,74 @@ export default function Commitments() {
           )}
         </div>
 
-        {/* Add Commitment Dialog - Needs company selection first if not in context */}
+        {/* Add/Edit Commitment Dialog */}
         <CommitmentDialog
-          isOpen={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          companyId={selectedCompanyId || (companies?.[0]?._id as Id<"companies">)}
+          isOpen={isAddDialogOpen || !!editingCommitment}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsAddDialogOpen(false);
+              setEditingCommitment(null);
+            }
+          }}
+          companyId={editingCommitment?.companyId || selectedCompanyId || (companies?.[0]?._id as Id<"companies">)}
+          commitment={editingCommitment}
         />
+
+        {/* View Commitment Dialog */}
+        <Dialog open={!!viewingCommitment} onOpenChange={(open) => !open && setViewingCommitment(null)}>
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تفاصيل الالتزام</DialogTitle>
+            </DialogHeader>
+            {viewingCommitment && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الرقم:</span>
+                  <span className="col-span-2">{viewingCommitment.commitmentNumber}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الشركة:</span>
+                  <span className="col-span-2">{viewingCommitment.companyName}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الحساب:</span>
+                  <span className="col-span-2">{viewingCommitment.account}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المبلغ:</span>
+                  <span className="col-span-2">{viewingCommitment.amount.toFixed(2)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المدفوع:</span>
+                  <span className="col-span-2 text-green-600">{viewingCommitment.paidAmount.toFixed(2)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المتبقي:</span>
+                  <span className="col-span-2 text-red-600">{(viewingCommitment.amount - viewingCommitment.paidAmount).toFixed(2)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">تاريخ الاستحقاق:</span>
+                  <span className="col-span-2">{new Date(viewingCommitment.dueDate).toLocaleDateString("ar-JO")}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الحالة:</span>
+                  <span className="col-span-2">
+                    <Badge className={STATUS_COLORS[viewingCommitment.status as keyof typeof STATUS_COLORS]}>
+                      {STATUS_LABELS[viewingCommitment.status as keyof typeof STATUS_LABELS]}
+                    </Badge>
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الوصف:</span>
+                  <span className="col-span-2">{viewingCommitment.description}</span>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={() => setViewingCommitment(null)}>إغلاق</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );

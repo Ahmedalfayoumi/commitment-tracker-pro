@@ -1,8 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign } from "lucide-react";
+import { Calendar, DollarSign, Eye, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -34,9 +45,12 @@ interface Commitment {
 interface CommitmentListProps {
   commitments: Commitment[] | undefined;
   onRecordPayment: (id: Id<"commitments">) => void;
+  onEdit?: (commitment: any) => void;
+  onDelete?: (id: Id<"commitments">) => void;
+  onView?: (commitment: any) => void;
 }
 
-export function CommitmentList({ commitments, onRecordPayment }: CommitmentListProps) {
+export function CommitmentList({ commitments, onRecordPayment, onEdit, onDelete, onView }: CommitmentListProps) {
   return (
     <div className="space-y-4">
       {commitments?.map((commitment) => (
@@ -69,14 +83,48 @@ export function CommitmentList({ commitments, onRecordPayment }: CommitmentListP
                   </div>
                 </div>
               </div>
-              {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                <Button
-                  onClick={() => onRecordPayment(commitment._id)}
-                  size="sm"
-                >
-                  تسجيل دفعة
-                </Button>
-              )}
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onView?.(commitment)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(commitment)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent dir="rtl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onDelete?.(commitment._id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          حذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                {commitment.status !== "paid" && commitment.status !== "cancelled" && (
+                  <Button
+                    onClick={() => onRecordPayment(commitment._id)}
+                    size="sm"
+                  >
+                    تسجيل دفعة
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -8,48 +8,69 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CommitmentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: Id<"companies">;
+  commitment?: any; // Add commitment prop for editing
 }
 
-export function CommitmentDialog({ isOpen, onOpenChange, companyId }: CommitmentDialogProps) {
+export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }: CommitmentDialogProps) {
   const createCommitment = useMutation(api.commitments.createCommitment);
+  const updateCommitment = useMutation(api.commitments.updateCommitment);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [form, setForm] = useState({
-    dueDate: "",
-    account: "",
-    description: "",
-    amount: "",
-    status: "active" as const,
+    dueDate: commitment ? new Date(commitment.dueDate).toISOString().split('T')[0] : "",
+    account: commitment?.account || "",
+    description: commitment?.description || "",
+    amount: commitment?.amount?.toString() || "",
+    status: commitment?.status || "active",
+  });
+
+  // Reset form when commitment changes or dialog opens
+  useState(() => {
+    if (commitment) {
+      setForm({
+        dueDate: new Date(commitment.dueDate).toISOString().split('T')[0],
+        account: commitment.account,
+        description: commitment.description,
+        amount: commitment.amount.toString(),
+        status: commitment.status,
+      });
+    }
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await createCommitment({
-        companyId,
-        dueDate: new Date(form.dueDate).getTime(),
-        account: form.account,
-        description: form.description,
-        amount: parseFloat(form.amount),
-        status: form.status,
-      });
-      toast.success("تم إنشاء الالتزام بنجاح");
+      if (commitment) {
+        await updateCommitment({
+          commitmentId: commitment._id,
+          dueDate: new Date(form.dueDate).getTime(),
+          account: form.account,
+          description: form.description,
+          amount: parseFloat(form.amount),
+          status: form.status,
+        });
+        toast.success("تم تحديث الالتزام بنجاح");
+      } else {
+        await createCommitment({
+          companyId,
+          dueDate: new Date(form.dueDate).getTime(),
+          account: form.account,
+          description: form.description,
+          amount: parseFloat(form.amount),
+          status: form.status,
+        });
+        toast.success("تم إنشاء الالتزام بنجاح");
+      }
       onOpenChange(false);
-      setForm({
-        dueDate: "",
-        account: "",
-        description: "",
-        amount: "",
-        status: "active",
-      });
     } catch (error) {
-      toast.error("حدث خطأ أثناء إنشاء الالتزام");
-      console.error(error);
+      toast.error("حدث خطأ أثناء حفظ الالتزام");
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +80,7 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId }: Commitment
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl" dir="rtl">
         <DialogHeader>
-          <DialogTitle>إضافة التزام جديد</DialogTitle>
+          <DialogTitle>{commitment ? "تعديل الالتزام" : "إضافة التزام جديد"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -99,6 +120,26 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId }: Commitment
               disabled={isLoading}
             />
           </div>
+          {commitment && (
+            <div className="space-y-2">
+              <Label htmlFor="status">الحالة</Label>
+              <Select 
+                value={form.status} 
+                onValueChange={(v: any) => setForm({ ...form, status: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">نشط</SelectItem>
+                  <SelectItem value="postponed">مؤجل</SelectItem>
+                  <SelectItem value="paid">مدفوع</SelectItem>
+                  <SelectItem value="partialPaid">مدفوع جزئياً</SelectItem>
+                  <SelectItem value="cancelled">ملغي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="description">الوصف *</Label>
             <Textarea
