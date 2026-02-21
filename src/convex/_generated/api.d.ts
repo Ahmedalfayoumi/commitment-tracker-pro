@@ -14,6 +14,7 @@ import type * as commitments from "../commitments.js";
 import type * as companies from "../companies.js";
 import type * as http from "../http.js";
 import type * as payments from "../payments.js";
+import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 
 import type {
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   companies: typeof companies;
   http: typeof http;
   payments: typeof payments;
+  seed: typeof seed;
   users: typeof users;
 }>;
 
