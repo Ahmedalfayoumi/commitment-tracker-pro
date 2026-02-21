@@ -24,7 +24,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const isLoginDisabled = false; // Re-enabled for testing the new user creation
+  const isLoginDisabled = false;
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -45,19 +45,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     } catch (error) {
       console.error("Auth error:", error);
       toast.error(error instanceof Error ? error.message : "حدث خطأ ما");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGuestSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signIn("anonymous");
-      toast.success("تم الدخول كضيف بنجاح");
-    } catch (error) {
-      console.error("Guest sign in error:", error);
-      toast.error("حدث خطأ أثناء الدخول كضيف");
     } finally {
       setIsLoading(false);
     }
@@ -87,10 +74,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>تنبيه</AlertTitle>
               <AlertDescription>
-                تسجيل الدخول معطل حالياً حتى إشعار آخر. يمكنك الدخول كضيف.
+                تسجيل الدخول معطل حالياً حتى إشعار آخر.
               </AlertDescription>
             </Alert>
           )}
+          
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-2 text-center">
+            <p className="text-xs text-muted-foreground mb-1">بيانات مدير النظام:</p>
+            <p className="text-sm font-mono font-bold text-primary">admin / admin</p>
+          </div>
+
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">اسم المستخدم</label>
@@ -104,34 +97,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "دخول"}
             </Button>
           </form>
-
-          <div className="relative w-full py-2">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">أو</span>
-            </div>
-          </div>
-
-          <Button 
-            variant="secondary" 
-            className="w-full gap-2" 
-            onClick={handleGuestSignIn} 
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "الدخول كضيف (بدون حساب)"}
-          </Button>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <div className="relative w-full">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">أو</span>
-            </div>
-          </div>
           <Link to="/" className="w-full">
             <Button variant="outline" className="w-full gap-2">
               <Home className="h-4 w-4" />

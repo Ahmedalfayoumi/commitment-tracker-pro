@@ -49,20 +49,6 @@ export default function Landing() {
     }
   };
 
-  const handleGuestAccess = async () => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
-      return;
-    }
-    try {
-      await signIn("anonymous");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Guest access error:", error);
-      toast.error("حدث خطأ أثناء محاولة الدخول كضيف");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden" dir="rtl">
       {/* Navigation */}
@@ -73,9 +59,6 @@ export default function Landing() {
               <Wallet className="h-6 w-6 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold tracking-tight">Commitment Tracker Pro</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={handleGuestAccess}>دخول كضيف</Button>
           </div>
         </div>
       </nav>
@@ -123,6 +106,12 @@ export default function Landing() {
                   <h2 className="text-2xl font-bold mb-2">تسجيل الدخول</h2>
                   <p className="text-muted-foreground text-sm">أدخل بيانات الاعتماد الخاصة بك للوصول إلى لوحة التحكم</p>
                 </div>
+                
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-6 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">بيانات مدير النظام للتجربة:</p>
+                  <p className="text-sm font-mono font-bold text-primary">admin / admin</p>
+                </div>
+
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="username">اسم المستخدم</Label>
@@ -156,12 +145,6 @@ export default function Landing() {
                     {isLoggingIn ? "جاري تسجيل الدخول..." : "دخول"}
                   </Button>
                 </form>
-                <div className="mt-6 pt-6 border-t text-center">
-                  <p className="text-sm text-muted-foreground mb-4">أو يمكنك البدء كضيف لتجربة النظام</p>
-                  <Button variant="outline" className="w-full h-12" onClick={handleGuestAccess}>
-                    تجربة كضيف
-                  </Button>
-                </div>
               </Card>
             </motion.div>
           </div>
