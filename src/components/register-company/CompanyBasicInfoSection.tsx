@@ -48,7 +48,7 @@ export function CompanyBasicInfoSection({
         <div className="space-y-2">
           <Label htmlFor="companyType">نوع الشركة *</Label>
           <Select
-            value={formData.companyType || undefined}
+            value={formData.companyType}
             onValueChange={(value) => setFormData({ ...formData, companyType: value })}
           >
             <SelectTrigger>
