@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useParams, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Plus, DollarSign, FileText, Calendar, Filter, Search, Settings, Upload, Palette, Building2 } from "lucide-react";
+import { ArrowRight, Plus, DollarSign, FileText, Calendar, Filter, Search, Settings, Upload, Palette, Building2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { CommitmentList } from "@/components/company-detail/CommitmentList";
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
 import { CompanySettings } from "@/components/company-detail/CompanySettings";
+import { CompanyUsersSection } from "@/components/company-detail/CompanyUsersSection";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -122,10 +123,14 @@ export default function CompanyDetail() {
         </div>
 
         <Tabs defaultValue="commitments" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsList className="grid w-full grid-cols-3 max-w-[500px]">
             <TabsTrigger value="commitments" className="gap-2">
               <FileText className="h-4 w-4" />
               الالتزامات
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              المستخدمين
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
@@ -155,6 +160,13 @@ export default function CompanyDetail() {
                 setSelectedCommitment(id);
                 setIsPaymentDialogOpen(true);
               }}
+            />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <CompanyUsersSection 
+              companyId={companyId as Id<"companies">} 
+              isAdmin={company?.userRole === "admin"} 
             />
           </TabsContent>
 

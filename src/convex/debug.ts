@@ -1,4 +1,5 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 export const checkSuperadmin = query({
   args: {},
@@ -23,5 +24,28 @@ export const checkSuperadmin = query({
         providerAccountId: a.providerAccountId,
       }))
     };
+  },
+});
+
+export const cleanupInvalidAuthAccounts = mutation({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    const accounts = await ctx.db.query("authAccounts").take(args.limit);
+    let deletedCount = 0;
+    for (const account of accounts) {
+      // @ts-ignore - we know it might be invalid according to schema
+      if (!account.userId || account.userId === "") {
+        await ctx.db.delete(account._id);
+        deletedCount++;
+      }
+    }
+    return { deletedCount };
+  },
+});
+
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
   },
 });

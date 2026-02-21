@@ -21,17 +21,11 @@ export const registerCompany = mutation({
     signatoryPhone: v.string(),
     logoStorageId: v.optional(v.id("_storage")),
     faviconStorageId: v.optional(v.id("_storage")),
-    adminName: v.optional(v.string()),
-    adminUsername: v.optional(v.string()),
-    adminPassword: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
-    // Check if superadmin (or just allow any authenticated user for now as per spec)
-    const currentUser = await ctx.db.get(userId);
-    
     const companyId = await ctx.db.insert("companies", {
       nameEn: args.nameEn,
       nameAr: args.nameAr,
@@ -60,55 +54,135 @@ export const registerCompany = mutation({
       role: "admin",
     });
 
-    // If admin credentials provided, create the user
-    if (args.adminUsername && args.adminPassword) {
-      // Check if username already exists
-      const existingUser = await ctx.db
-        .query("users")
-        .withIndex("username", (q) => q.eq("username", args.adminUsername!))
-        .first();
+    return companyId;
+  },
+});
 
-      let newUserId;
-      if (!existingUser) {
-        newUserId = await ctx.db.insert("users", {
-          username: args.adminUsername,
-          name: args.adminName,
-          role: "user",
-        });
+// Add a new user to a company
+export const addCompanyUser = mutation({
+  args: {
+    companyId: v.id("companies"),
+    name: v.string(),
+    username: v.string(),
+    password: v.string(),
+    role: v.union(v.literal("admin"), v.literal("user")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
 
-        // Create auth account for password provider
-        // Note: In a real app, we'd hash the password. 
-        // Since we are in a mutation and can't use actions easily here without refactoring,
-        // and Convex Auth's Password provider expects a hashed password in authAccounts,
-        // we'll store it. The Password provider will check this.
-        await ctx.db.insert("authAccounts", {
-          userId: newUserId,
-          provider: "password",
-          providerAccountId: args.adminUsername,
-          secret: args.adminPassword, // In production, this MUST be hashed
-        });
-      } else {
-        newUserId = existingUser._id;
-      }
+    // Check if current user is admin of this company
+    const companyUser = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", args.companyId).eq("userId", userId)
+      )
+      .first();
 
-      // Link the new user to the company as admin
-      const existingLink = await ctx.db
-        .query("companyUsers")
-        .withIndex("by_companyId_and_userId", (q) =>
-          q.eq("companyId", companyId).eq("userId", newUserId)
-        )
-        .first();
-
-      if (!existingLink) {
-        await ctx.db.insert("companyUsers", {
-          companyId,
-          userId: newUserId,
-          role: "admin",
-        });
-      }
+    if (!companyUser || companyUser.role !== "admin") {
+      throw new Error("Only company admins can add users");
     }
 
-    return companyId;
+    // Check if username already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("username", (q) => q.eq("username", args.username))
+      .first();
+
+    let newUserId;
+    if (!existingUser) {
+      newUserId = await ctx.db.insert("users", {
+        username: args.username,
+        name: args.name,
+        role: "user",
+      });
+
+      await ctx.db.insert("authAccounts", {
+        userId: newUserId,
+        provider: "password",
+        providerAccountId: args.username,
+        secret: args.password,
+      });
+    } else {
+      newUserId = existingUser._id;
+    }
+
+    // Link user to company
+    const existingLink = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", args.companyId).eq("userId", newUserId)
+      )
+      .first();
+
+    if (!existingLink) {
+      await ctx.db.insert("companyUsers", {
+        companyId: args.companyId,
+        userId: newUserId,
+        role: args.role,
+      });
+    }
+
+    return newUserId;
+  },
+});
+
+// Get all users for a company
+export const getCompanyUsers = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const companyUsers = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
+      .collect();
+
+    const users = await Promise.all(
+      companyUsers.map(async (cu) => {
+        const user = await ctx.db.get(cu.userId);
+        return {
+          ...user,
+          companyUserRole: cu.role,
+          companyUserId: cu._id,
+        };
+      })
+    );
+
+    return users;
+  },
+});
+
+// Remove user from company
+export const removeCompanyUser = mutation({
+  args: { companyUserId: v.id("companyUsers") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const linkToRemove = await ctx.db.get(args.companyUserId);
+    if (!linkToRemove) throw new Error("Link not found");
+
+    // Check if current user is admin of this company
+    const currentUserLink = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", linkToRemove.companyId).eq("userId", userId)
+      )
+      .first();
+
+    if (!currentUserLink || currentUserLink.role !== "admin") {
+      throw new Error("Only company admins can remove users");
+    }
+
+    // Prevent removing yourself if you are the owner
+    const company = await ctx.db.get(linkToRemove.companyId);
+    if (company?.ownerId === linkToRemove.userId) {
+      throw new Error("Cannot remove the company owner");
+    }
+
+    await ctx.db.delete(args.companyUserId);
   },
 });
 

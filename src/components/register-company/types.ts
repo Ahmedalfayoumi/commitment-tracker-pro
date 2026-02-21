@@ -13,7 +13,4 @@ export type RegisterCompanyFormData = {
   phone: string;
   signatoryName: string;
   signatoryPhone: string;
-  adminName: string;
-  adminUsername: string;
-  adminPassword: string;
 };
