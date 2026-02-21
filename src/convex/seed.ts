@@ -38,25 +38,30 @@ export const finishSeedSuperAdmin = internalMutation({
     }
 
     // 3. Create or Update Password account for the admin
-    const existingAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) =>
-        q.eq("userId", userId).eq("provider", "password")
+    // We use both the username and email as potential identifiers
+    const identifiers = ["admin", "admin@commitmenttracker.pro"];
+    
+    for (const identifier of identifiers) {
+      const existingAccount = await ctx.db
+        .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", identifier)
       )
-      .first();
+        .first();
 
-    if (existingAccount) {
-      await ctx.db.patch(existingAccount._id, {
-        secret: args.hashedPassword,
-        providerAccountId: "admin", // Ensure this matches the expected providerAccountId for the Password provider
-      });
-    } else {
-      await ctx.db.insert("authAccounts", {
-        userId,
-        provider: "password",
-        providerAccountId: "admin", // Ensure this matches the expected providerAccountId for the Password provider
-        secret: args.hashedPassword,
-      });
+      if (existingAccount) {
+        await ctx.db.patch(existingAccount._id, {
+          userId,
+          secret: args.hashedPassword,
+        });
+      } else {
+        await ctx.db.insert("authAccounts", {
+          userId,
+          provider: "password",
+          providerAccountId: identifier,
+          secret: args.hashedPassword,
+        });
+      }
     }
 
     // 4. Create Master Company if it doesn't exist

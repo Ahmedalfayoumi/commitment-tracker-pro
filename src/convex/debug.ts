@@ -1,51 +1,48 @@
-import { mutation, query } from "./_generated/server";
+import { query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const checkSuperadmin = query({
+export const getAdminStatus = query({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.db
+    const adminUser = await ctx.db
       .query("users")
       .withIndex("username", (q) => q.eq("username", "admin"))
       .first();
-    
-    if (!user) return { status: "User not found" };
 
-    const accounts = await ctx.db
+    if (!adminUser) {
+      return { error: "Admin user not found in 'users' table" };
+    }
+
+    const adminAccount = await ctx.db
       .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) => q.eq("userId", user._id))
-      .collect();
+      .withIndex("userIdAndProvider", (q) =>
+        q.eq("userId", adminUser._id).eq("provider", "password")
+      )
+      .first();
+
+    const accountByIdentifier = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", "admin")
+      )
+      .first();
 
     return {
-      user,
-      accounts: accounts.map(a => ({
-        id: a._id,
-        provider: a.provider,
-        providerAccountId: a.providerAccountId,
-      }))
+      user: {
+        id: adminUser._id,
+        username: adminUser.username,
+        email: adminUser.email,
+      },
+      accountByUserId: adminAccount ? {
+        id: adminAccount._id,
+        providerAccountId: adminAccount.providerAccountId,
+        hasSecret: !!adminAccount.secret,
+      } : null,
+      accountByIdentifier: accountByIdentifier ? {
+        id: accountByIdentifier._id,
+        userId: accountByIdentifier.userId,
+        providerAccountId: accountByIdentifier.providerAccountId,
+      } : null,
     };
-  },
-});
-
-export const cleanupInvalidAuthAccounts = mutation({
-  args: { limit: v.number() },
-  handler: async (ctx, args) => {
-    const accounts = await ctx.db.query("authAccounts").take(args.limit);
-    let deletedCount = 0;
-    for (const account of accounts) {
-      // @ts-ignore - we know it might be invalid according to schema
-      if (!account.userId || account.userId === "") {
-        await ctx.db.delete(account._id);
-        deletedCount++;
-      }
-    }
-    return { deletedCount };
-  },
-});
-
-export const listAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
   },
 });

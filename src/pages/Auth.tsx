@@ -39,13 +39,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     try {
       const formData = new FormData(event.currentTarget);
-      // Map username to email for the Password provider
-      const username = formData.get("username");
-      if (username) {
-        formData.append("email", username as string);
-      }
-      formData.append("flow", "signIn");
-      await signIn("password", formData);
+      const username = formData.get("username") as string;
+      const password = formData.get("password") as string;
+      
+      // The Password provider expects 'email' or 'phone' as the account identifier.
+      // We'll try to sign in using the provided username as the 'email' field.
+      await signIn("password", { email: username, password, flow: "signIn" });
+      
       toast.success("تم تسجيل الدخول بنجاح");
     } catch (error) {
       console.error("Auth error:", error);
