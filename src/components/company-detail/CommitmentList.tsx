@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, Eye, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Id } from "@/convex/_generated/dataModel";
+import { formatAmount, formatDate } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,17 +70,17 @@ export function CommitmentList({ commitments, onRecordPayment, onEdit, onDelete,
                 <div className="flex items-center gap-6 text-sm">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{new Date(commitment.dueDate).toLocaleDateString("ar-JO")}</span>
+                    <span>{formatDate(commitment.dueDate)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>المبلغ: {commitment.amount.toFixed(2)} د.أ</span>
+                    <span>المبلغ: {formatAmount(commitment.amount)} د.أ</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-green-600">المدفوع: {commitment.paidAmount.toFixed(2)} د.أ</span>
+                    <span className="text-green-600">المدفوع: {formatAmount(commitment.paidAmount)} د.أ</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-red-600">المتبقي: {(commitment.amount - commitment.paidAmount).toFixed(2)} د.أ</span>
+                    <span className="text-red-600">المتبقي: {formatAmount(commitment.amount - commitment.paidAmount)} د.أ</span>
                   </div>
                 </div>
               </div>

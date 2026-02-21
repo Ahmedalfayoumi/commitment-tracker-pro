@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, DollarSign } from "lucide-react";
+import { formatAmount } from "@/lib/utils";
 
 interface SummaryCardsProps {
   totalCommitments: number;
@@ -16,7 +17,7 @@ export function SummaryCards({ totalCommitments, totalPaid, totalRemaining }: Su
           <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalCommitments.toFixed(2)} د.أ</div>
+          <div className="text-2xl font-bold">{formatAmount(totalCommitments)} د.أ</div>
         </CardContent>
       </Card>
       <Card>
@@ -25,7 +26,7 @@ export function SummaryCards({ totalCommitments, totalPaid, totalRemaining }: Su
           <DollarSign className="h-4 w-4 text-green-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">{totalPaid.toFixed(2)} د.أ</div>
+          <div className="text-2xl font-bold text-green-600">{formatAmount(totalPaid)} د.أ</div>
         </CardContent>
       </Card>
       <Card>
@@ -34,7 +35,7 @@ export function SummaryCards({ totalCommitments, totalPaid, totalRemaining }: Su
           <DollarSign className="h-4 w-4 text-red-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">{totalRemaining.toFixed(2)} د.أ</div>
+          <div className="text-2xl font-bold text-red-600">{formatAmount(totalRemaining)} د.أ</div>
         </CardContent>
       </Card>
     </div>

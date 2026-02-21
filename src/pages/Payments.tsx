@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { formatAmount, formatDate } from "@/lib/utils";
 
 export default function Payments() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -197,7 +198,7 @@ export default function Payments() {
                   {payments?.map((payment) => (
                     <TableRow key={payment._id}>
                       <TableCell className="font-medium">
-                        {new Date(payment.paymentDate).toLocaleDateString("ar-JO")}
+                        {formatDate(payment.paymentDate)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -213,7 +214,7 @@ export default function Payments() {
                       </TableCell>
                       <TableCell>{payment.paymentMethod}</TableCell>
                       <TableCell className="text-left font-bold text-green-600">
-                        {payment.amount.toFixed(2)} د.أ
+                        {formatAmount(payment.amount)} د.أ
                       </TableCell>
                     </TableRow>
                   ))}

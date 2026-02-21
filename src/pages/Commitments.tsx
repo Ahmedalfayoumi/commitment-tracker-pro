@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+import { formatAmount, formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -201,10 +202,10 @@ export default function Commitments() {
                   <div className="flex flex-col md:items-end justify-between gap-4">
                     <div className="text-left md:text-right">
                       <div className="text-2xl font-bold text-primary">
-                        {commitment.amount.toFixed(2)} د.أ
+                        {formatAmount(commitment.amount)} د.أ
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        تاريخ الاستحقاق: {new Date(commitment.dueDate).toLocaleDateString("ar-JO")}
+                        تاريخ الاستحقاق: {formatDate(commitment.dueDate)}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -297,19 +298,19 @@ export default function Commitments() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">المبلغ:</span>
-                  <span className="col-span-2">{viewingCommitment.amount.toFixed(2)} د.أ</span>
+                  <span className="col-span-2">{formatAmount(viewingCommitment.amount)} د.أ</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">المدفوع:</span>
-                  <span className="col-span-2 text-green-600">{viewingCommitment.paidAmount.toFixed(2)} د.أ</span>
+                  <span className="col-span-2 text-green-600">{formatAmount(viewingCommitment.paidAmount)} د.أ</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">المتبقي:</span>
-                  <span className="col-span-2 text-red-600">{(viewingCommitment.amount - viewingCommitment.paidAmount).toFixed(2)} د.أ</span>
+                  <span className="col-span-2 text-red-600">{formatAmount(viewingCommitment.amount - viewingCommitment.paidAmount)} د.أ</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">تاريخ الاستحقاق:</span>
-                  <span className="col-span-2">{new Date(viewingCommitment.dueDate).toLocaleDateString("ar-JO")}</span>
+                  <span className="col-span-2">{formatDate(viewingCommitment.dueDate)}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">الحالة:</span>
