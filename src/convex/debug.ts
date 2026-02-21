@@ -5,7 +5,7 @@ export const checkSuperadmin = query({
   handler: async (ctx) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("username", (q) => q.eq("username", "superadmin"))
+      .withIndex("username", (q) => q.eq("username", "admin"))
       .first();
     
     if (!user) return { status: "User not found" };
