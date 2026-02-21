@@ -15,6 +15,8 @@ import { AddressSection } from "@/components/register-company/AddressSection";
 import { SignatorySection } from "@/components/register-company/SignatorySection";
 import { LogoSection } from "@/components/register-company/LogoSection";
 import { RegisterCompanyActions } from "@/components/register-company/RegisterCompanyActions";
+import { useQuery } from "convex/react";
+import { ROLES } from "@/convex/schema";
 
 const COMPANY_TYPES = [
   "شركة مساهمة عامة",
@@ -45,6 +47,7 @@ const SECTORS = [
 
 export default function RegisterCompany() {
   const { isAuthenticated, isLoading } = useAuth();
+  const user = useQuery(api.users.currentUser);
   const navigate = useNavigate();
   const registerCompany = useMutation(api.companies.registerCompany);
   const generateUploadUrl = useMutation(api.companies.generateUploadUrl);
@@ -80,6 +83,16 @@ export default function RegisterCompany() {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" />;
+  }
+
+  if (user && user.role !== ROLES.ADMIN) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+        <h1 className="text-2xl font-bold mb-2">غير مصرح لك</h1>
+        <p className="text-muted-foreground mb-4">فقط مدير النظام يمكنه تسجيل شركات جديدة.</p>
+        <Button onClick={() => navigate("/dashboard")}>العودة للوحة التحكم</Button>
+      </div>
+    );
   }
 
   const handleSectorToggle = (sector: string) => {

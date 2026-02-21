@@ -3,6 +3,7 @@ import { query, QueryCtx, mutation, internalAction, internalMutation } from "./_
 import { v } from "convex/values";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { internal } from "./_generated/api";
+import { ROLES } from "./schema";
 
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
@@ -56,6 +57,29 @@ export const changePassword = mutation({
     // We need to hash the password, which requires a Node action
     await ctx.scheduler.runAfter(0, internal.users.hashAndSavePassword, {
       userId,
+      password: args.newPassword,
+    });
+
+    return { success: true };
+  },
+});
+
+export const adminResetPassword = mutation({
+  args: {
+    userId: v.id("users"),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) throw new Error("Unauthorized");
+
+    const currentUser = await ctx.db.get(currentUserId);
+    if (currentUser?.role !== ROLES.ADMIN) {
+      throw new Error("Only system admins can reset passwords");
+    }
+
+    await ctx.scheduler.runAfter(0, internal.users.hashAndSavePassword, {
+      userId: args.userId,
       password: args.newPassword,
     });
 

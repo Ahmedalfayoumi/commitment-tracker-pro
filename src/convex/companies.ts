@@ -30,6 +30,11 @@ export const registerCompany = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
+    const user = await ctx.db.get(userId);
+    if (user?.role !== ROLES.ADMIN) {
+      throw new Error("Only system admins can register new companies");
+    }
+
     const companyId = await ctx.db.insert("companies", {
       nameEn: args.nameEn,
       nameAr: args.nameAr,
