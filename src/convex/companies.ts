@@ -4,6 +4,7 @@ import { mutation, query, internalMutation, action } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { hashPassword } from "./auth/utils";
+import { ROLES } from "./schema";
 
 // Register a new company
 export const registerCompany = mutation({
@@ -95,7 +96,11 @@ export const internalAddCompanyUser = internalMutation({
     currentUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Check if current user is admin of this company
+    const currentUser = await ctx.db.get(args.currentUserId);
+    
+    // Check if current user is system admin OR admin of this company
+    const isSystemAdmin = currentUser?.role === ROLES.ADMIN;
+    
     const companyUser = await ctx.db
       .query("companyUsers")
       .withIndex("by_companyId_and_userId", (q) =>
@@ -103,8 +108,8 @@ export const internalAddCompanyUser = internalMutation({
       )
       .first();
 
-    if (!companyUser || companyUser.role !== "admin") {
-      throw new Error("Only company admins can add users");
+    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
+      throw new Error("Only company admins or system admins can add users");
     }
 
     // Check if username already exists
@@ -125,7 +130,7 @@ export const internalAddCompanyUser = internalMutation({
         userId: newUserId,
         provider: "password",
         providerAccountId: args.username,
-        secret: args.password, // Now receiving the hashed password
+        secret: args.password,
       });
     } else {
       newUserId = existingUser._id;
@@ -145,6 +150,9 @@ export const internalAddCompanyUser = internalMutation({
         userId: newUserId,
         role: args.role,
       });
+    } else {
+      // Update role if already linked
+      await ctx.db.patch(existingLink._id, { role: args.role });
     }
 
     return newUserId;
@@ -154,7 +162,7 @@ export const internalAddCompanyUser = internalMutation({
 // Update a user's role or name within a company
 export const updateCompanyUser = mutation({
   args: {
-    companyUserId: v.id("companyUsers"), // The _id of the companyUsers link
+    companyUserId: v.id("companyUsers"),
     name: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
   },
@@ -162,8 +170,11 @@ export const updateCompanyUser = mutation({
     const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) throw new Error("Unauthorized");
 
+    const currentUser = await ctx.db.get(currentUserId);
     const companyUserLink = await ctx.db.get(args.companyUserId);
     if (!companyUserLink) throw new Error("Company user link not found");
+
+    const isSystemAdmin = currentUser?.role === ROLES.ADMIN;
 
     // Check if current user is admin of this company
     const currentUserCompanyLink = await ctx.db
@@ -173,8 +184,8 @@ export const updateCompanyUser = mutation({
       )
       .first();
 
-    if (!currentUserCompanyLink || currentUserCompanyLink.role !== "admin") {
-      throw new Error("Only company admins can update user roles");
+    if (!isSystemAdmin && (!currentUserCompanyLink || currentUserCompanyLink.role !== "admin")) {
+      throw new Error("Only company admins or system admins can update user roles");
     }
 
     // Update the user's role in companyUsers table
@@ -225,8 +236,11 @@ export const removeCompanyUser = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
+    const currentUser = await ctx.db.get(userId);
     const linkToRemove = await ctx.db.get(args.companyUserId);
     if (!linkToRemove) throw new Error("Link not found");
+
+    const isSystemAdmin = currentUser?.role === ROLES.ADMIN;
 
     // Check if current user is admin of this company
     const currentUserLink = await ctx.db
@@ -236,8 +250,8 @@ export const removeCompanyUser = mutation({
       )
       .first();
 
-    if (!currentUserLink || currentUserLink.role !== "admin") {
-      throw new Error("Only company admins can remove users");
+    if (!isSystemAdmin && (!currentUserLink || currentUserLink.role !== "admin")) {
+      throw new Error("Only company admins or system admins can remove users");
     }
 
     // Prevent removing yourself if you are the owner
