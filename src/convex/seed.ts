@@ -1,5 +1,6 @@
 import { internalMutation, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { ROLES } from "./schema";
 
 export const seedSuperAdmin = mutation({
   args: {},
@@ -19,18 +20,10 @@ export const seedSuperAdmin = mutation({
       name: "Super Admin",
       username: "superadmin",
       email: "superadmin@commitmenttracker.pro",
-      role: "admin",
+      role: ROLES.ADMIN,
     });
 
-    // 3. Create Password Account (This is what allows the login to work)
-    // Note: We use a placeholder for the password hash. 
-    // In a real scenario, you'd use the library's hashing, 
-    // but for seeding we'll set up the account link.
-    await ctx.db.insert("authAccounts", {
-      userId,
-      provider: "password",
-      providerAccountId: "superadmin",
-    });
+    // 3. Password account should be created via UI signup to ensure correct hashing.
 
     // 4. Create Master Company
     const companyId = await ctx.db.insert("companies", {
