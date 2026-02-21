@@ -122,11 +122,11 @@ export default function Landing() {
                 </div>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="username">اسم المستخدم (البريد الإلكتروني)</Label>
+                    <Label htmlFor="username">اسم المستخدم</Label>
                     <Input
                       id="username"
                       type="text"
-                      placeholder="name@company.com"
+                      placeholder="admin"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="h-12"
