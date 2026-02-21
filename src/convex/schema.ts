@@ -22,13 +22,14 @@ const schema = defineSchema(
     ...authTables,
 
     users: defineTable({
+      username: v.optional(v.string()),
       name: v.optional(v.string()),
       image: v.optional(v.string()),
       email: v.optional(v.string()),
       emailVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
-    }).index("email", ["email"]),
+    }).index("email", ["email"]).index("username", ["username"]),
 
     // Companies table
     companies: defineTable({
