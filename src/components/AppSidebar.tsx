@@ -45,7 +45,7 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate("/auth");
+    navigate("/");
   };
 
   const navItems = [
@@ -162,14 +162,6 @@ export function AppSidebar() {
                 <DropdownMenuItem className="gap-2 cursor-pointer">
                   <Settings className="h-4 w-4" />
                   <span>الإعدادات</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="gap-2 text-destructive focus:text-destructive cursor-pointer"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>تسجيل الخروج</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

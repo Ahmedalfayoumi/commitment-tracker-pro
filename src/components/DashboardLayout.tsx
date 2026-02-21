@@ -18,7 +18,7 @@ export default function DashboardLayout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/" />;
   }
 
   return (

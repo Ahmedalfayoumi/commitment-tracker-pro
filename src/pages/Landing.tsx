@@ -45,9 +45,6 @@ export default function Landing() {
             <span className="text-xl font-bold tracking-tight">Commitment Tracker Pro</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/auth">
-              <Button variant="ghost">تسجيل الدخول</Button>
-            </Link>
             <Button onClick={handleStartNow}>ابدأ الآن</Button>
           </div>
         </div>
