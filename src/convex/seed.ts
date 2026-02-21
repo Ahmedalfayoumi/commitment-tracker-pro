@@ -1,14 +1,13 @@
-import { internalMutation, mutation, action, internalAction } from "./_generated/server";
+import { internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { ROLES } from "./schema";
-import { Password } from "@convex-dev/auth/providers/Password";
 import { internal } from "./_generated/api";
 
 export const seedSuperAdmin = action({
   args: {},
   handler: async (ctx) => {
-    const passwordConfig = Password() as any;
-    const hashedPassword = await passwordConfig.crypto.hashSecret("admin");
+    // Hash the password using ctx.auth.hashPassword, which is available in actions.
+    const hashedPassword = await ctx.auth.hashPassword("admin");
     await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
   },
 });
@@ -40,7 +39,7 @@ export const finishSeedSuperAdmin = internalMutation({
     // 3. Create or Update Password account for the admin
     const existingAccount = await ctx.db
       .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) => 
+      .withIndex("userIdAndProvider", (q) =>
         q.eq("userId", userId).eq("provider", "password")
       )
       .first();
@@ -48,13 +47,13 @@ export const finishSeedSuperAdmin = internalMutation({
     if (existingAccount) {
       await ctx.db.patch(existingAccount._id, {
         secret: args.hashedPassword,
-        providerAccountId: "admin",
+        providerAccountId: "admin", // Ensure this matches the expected providerAccountId for the Password provider
       });
     } else {
       await ctx.db.insert("authAccounts", {
         userId,
         provider: "password",
-        providerAccountId: "admin",
+        providerAccountId: "admin", // Ensure this matches the expected providerAccountId for the Password provider
         secret: args.hashedPassword,
       });
     }
@@ -103,7 +102,7 @@ export const finishSeedSuperAdmin = internalMutation({
       });
     }
 
-    return { 
+    return {
       message: "Admin user (admin/admin) and Master Company seeded successfully with hashed password.",
     };
   },

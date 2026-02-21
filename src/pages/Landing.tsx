@@ -35,7 +35,9 @@ export default function Landing() {
     setIsLoggingIn(true);
     try {
       const formData = new FormData();
-      formData.append("username", username);
+      // The Password provider expects 'email' or 'phone' by default.
+      // We map username to email so the provider can find the account.
+      formData.append("email", username);
       formData.append("password", password);
       formData.append("flow", "signIn");
       await signIn("password", formData);

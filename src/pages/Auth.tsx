@@ -39,6 +39,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     try {
       const formData = new FormData(event.currentTarget);
+      // Map username to email for the Password provider
+      const username = formData.get("username");
+      if (username) {
+        formData.append("email", username as string);
+      }
       formData.append("flow", "signIn");
       await signIn("password", formData);
       toast.success("تم تسجيل الدخول بنجاح");
