@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -60,7 +60,7 @@ export function CompanyUsersSection({
   isAdmin,
 }: CompanyUsersSectionProps) {
   const companyUsers = useQuery(api.companies.getCompanyUsers, { companyId });
-  const addCompanyUser = useMutation(api.companies.addCompanyUser);
+  const addCompanyUser = useAction(api.companies.addCompanyUser);
   const removeCompanyUser = useMutation(api.companies.removeCompanyUser);
 
   const [newUserName, setNewUserName] = useState("");

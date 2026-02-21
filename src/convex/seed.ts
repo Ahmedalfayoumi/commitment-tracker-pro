@@ -2,14 +2,14 @@ import { internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { ROLES } from "./schema";
 import { internal } from "./_generated/api";
+import { hashPassword } from "./auth/utils";
 
 export const seedSuperAdmin = action({
   args: {},
   handler: async (ctx) => {
-    // We'll use "admin" as the password for now to ensure the seed completes.
-    // The Password provider will attempt to verify this. 
-    // If it fails, we will investigate the hashing requirements.
-    await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword: "admin" });
+    // Re-implementing secure password hashing
+    const hashedPassword = await hashPassword("admin");
+    await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
   },
 });
 

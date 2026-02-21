@@ -1,6 +1,9 @@
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, action } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+import { hashPassword } from "./auth/utils";
 
 // Register a new company
 export const registerCompany = mutation({
@@ -58,8 +61,8 @@ export const registerCompany = mutation({
   },
 });
 
-// Add a new user to a company
-export const addCompanyUser = mutation({
+// Add a new user to a company - converted to action to handle hashing
+export const addCompanyUser = action({
   args: {
     companyId: v.id("companies"),
     name: v.string(),
@@ -67,15 +70,36 @@ export const addCompanyUser = mutation({
     password: v.string(),
     role: v.union(v.literal("admin"), v.literal("user")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"users">> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
+    // Hash the password before passing it to the internal mutation
+    const hashedPassword = await hashPassword(args.password);
+
+    return await ctx.runMutation(internal.companies.internalAddCompanyUser, {
+      ...args,
+      password: hashedPassword,
+      currentUserId: userId,
+    });
+  },
+});
+
+export const internalAddCompanyUser = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    name: v.string(),
+    username: v.string(),
+    password: v.string(), // This will be the hashed password
+    role: v.union(v.literal("admin"), v.literal("user")),
+    currentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
     // Check if current user is admin of this company
     const companyUser = await ctx.db
       .query("companyUsers")
       .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", args.companyId).eq("userId", userId)
+        q.eq("companyId", args.companyId).eq("userId", args.currentUserId)
       )
       .first();
 
@@ -101,7 +125,7 @@ export const addCompanyUser = mutation({
         userId: newUserId,
         provider: "password",
         providerAccountId: args.username,
-        secret: args.password,
+        secret: args.password, // Now receiving the hashed password
       });
     } else {
       newUserId = existingUser._id;
