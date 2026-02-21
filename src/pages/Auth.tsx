@@ -13,6 +13,8 @@ import { Home, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -22,6 +24,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const isLoginDisabled = true; // Set to true to disable login form
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -32,6 +35,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isLoginDisabled) return;
     setIsLoading(true);
     try {
       const formData = new FormData(event.currentTarget);
@@ -64,17 +68,26 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           <CardTitle className="text-2xl font-bold">التزامات برو</CardTitle>
           <CardDescription>إدارة التزاماتك المالية بكل سهولة</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {isLoginDisabled && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>تنبيه</AlertTitle>
+              <AlertDescription>
+                تسجيل الدخول معطل حالياً حتى إشعار آخر.
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">اسم المستخدم</label>
-              <Input name="username" required placeholder="أدخل اسم المستخدم" disabled={isLoading} />
+              <Input name="username" required placeholder="أدخل اسم المستخدم" disabled={isLoading || isLoginDisabled} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">كلمة المرور</label>
-              <Input name="password" type="password" required placeholder="••••••••" disabled={isLoading} />
+              <Input name="password" type="password" required placeholder="••••••••" disabled={isLoading || isLoginDisabled} />
             </div>
-            <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+            <Button type="submit" className="w-full gap-2" disabled={isLoading || isLoginDisabled}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "دخول"}
             </Button>
           </form>
