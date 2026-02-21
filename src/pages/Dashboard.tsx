@@ -55,7 +55,7 @@ export default function Dashboard() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {companies?.map((company) => (
+            {companies?.map((company: any) => (
               <motion.div
                 key={company._id}
                 initial={{ opacity: 0, scale: 0.95 }}

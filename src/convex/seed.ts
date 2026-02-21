@@ -7,8 +7,9 @@ import { internal } from "./_generated/api";
 export const seedSuperAdmin = action({
   args: {},
   handler: async (ctx) => {
-    const hashedPassword = await Password.hash("admin");
-    return await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
+    const passwordConfig = Password() as any;
+    const hashedPassword = await passwordConfig.crypto.hashSecret("admin");
+    await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
   },
 });
 

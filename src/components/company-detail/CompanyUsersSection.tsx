@@ -215,7 +215,7 @@ export function CompanyUsersSection({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {companyUsers.map((user) => (
+                {companyUsers.map((user: any) => (
                   <TableRow key={user._id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.username}</TableCell>

@@ -94,8 +94,8 @@ export default function CompanyDetail() {
     );
   }
 
-  const totalCommitments = commitments?.reduce((sum, c) => sum + c.amount, 0) || 0;
-  const totalPaid = commitments?.reduce((sum, c) => sum + c.paidAmount, 0) || 0;
+  const totalCommitments = commitments?.reduce((sum: number, c: any) => sum + c.amount, 0) || 0;
+  const totalPaid = commitments?.reduce((sum: number, c: any) => sum + c.paidAmount, 0) || 0;
   const totalRemaining = totalCommitments - totalPaid;
 
   return (

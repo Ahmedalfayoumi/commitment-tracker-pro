@@ -65,7 +65,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-l" dir="rtl">
+    <Sidebar side="right" collapsible="icon" className="border-l" dir="rtl">
       <SidebarHeader className="p-4">
         <Link to="/dashboard" className="flex items-center gap-3 px-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -107,7 +107,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>شركاتي</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {companies?.map((company) => (
+              {companies?.map((company: any) => (
                 <SidebarMenuItem key={company._id}>
                   <SidebarMenuButton 
                     asChild 

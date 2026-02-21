@@ -66,7 +66,8 @@ export const changePassword = mutation({
 export const hashAndSavePassword = internalAction({
   args: { userId: v.id("users"), password: v.string() },
   handler: async (ctx, args) => {
-    const hashedPassword = await Password.hash(args.password);
+    const passwordConfig = Password() as any;
+    const hashedPassword = await passwordConfig.crypto.hashSecret(args.password);
     await ctx.runMutation(internal.users.updatePasswordAccount, {
       userId: args.userId,
       hashedPassword,
