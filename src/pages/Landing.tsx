@@ -34,8 +34,11 @@ export default function Landing() {
 
     setIsLoggingIn(true);
     try {
-      // Using 'email' as the key because the password provider looks for this in providerAccountId
-      await signIn("password", { email: username, password });
+      const formData = new FormData();
+      formData.append("username", username);
+      formData.append("password", password);
+      formData.append("flow", "signIn");
+      await signIn("password", formData);
       toast.success("تم تسجيل الدخول بنجاح");
       navigate("/dashboard");
     } catch (error) {
