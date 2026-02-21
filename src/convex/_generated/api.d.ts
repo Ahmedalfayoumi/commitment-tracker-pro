@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as commitments from "../commitments.js";
 import type * as companies from "../companies.js";
+import type * as debug from "../debug.js";
 import type * as http from "../http.js";
 import type * as payments from "../payments.js";
 import type * as seed from "../seed.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   "auth/emailOtp": typeof auth_emailOtp;
   commitments: typeof commitments;
   companies: typeof companies;
+  debug: typeof debug;
   http: typeof http;
   payments: typeof payments;
   seed: typeof seed;
