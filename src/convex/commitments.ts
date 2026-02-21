@@ -118,17 +118,23 @@ export const getCommitments = query({
 
     if (!companyUser) return [];
 
-    let q = ctx.db.query("commitments");
-    
-    if (args.month) {
-      q = q.withIndex("by_companyId_and_numberPrefix", (query) => 
-        query.eq("companyId", args.companyId).eq("numberPrefix", args.month)
-      );
-    } else {
-      q = q.withIndex("by_companyId", (query) => query.eq("companyId", args.companyId));
-    }
+    let commitments;
 
-    let commitments = await q.order("desc").take(100);
+    if (args.month) {
+      commitments = await ctx.db
+        .query("commitments")
+        .withIndex("by_companyId_and_numberPrefix", (query) =>
+          query.eq("companyId", args.companyId).eq("numberPrefix", args.month!)
+        )
+        .order("desc")
+        .take(100);
+    } else {
+      commitments = await ctx.db
+        .query("commitments")
+        .withIndex("by_companyId", (query) => query.eq("companyId", args.companyId))
+        .order("desc")
+        .take(100);
+    }
 
     // Filter by search query
     if (args.searchQuery) {
