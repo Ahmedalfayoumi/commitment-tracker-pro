@@ -23,6 +23,7 @@ import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
 import { CompanySettings } from "@/components/company-detail/CompanySettings";
 import { CompanyUsersSection } from "@/components/company-detail/CompanyUsersSection";
+import { UserEditDialog } from "@/components/company-detail/UserEditDialog";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -117,7 +118,7 @@ export default function CompanyDetail() {
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
                 {company?.nameAr}
               </h1>
-              <p className="text-slate-600 dark:text-slate-400 font-medium">{company?.nameEn}</p>
+              <p className="text-slate-600 dark:text-slate-400 font-medium">الشركة: {company?.nameEn}</p>
             </div>
           </div>
         </div>
@@ -139,13 +140,13 @@ export default function CompanyDetail() {
           </TabsList>
 
           <TabsContent value="commitments" className="space-y-6">
-            <SummaryCards 
-              totalCommitments={totalCommitments} 
-              totalPaid={totalPaid} 
-              totalRemaining={totalRemaining} 
+            <SummaryCards
+              totalCommitments={totalCommitments}
+              totalPaid={totalPaid}
+              totalRemaining={totalRemaining}
             />
 
-            <CommitmentFilters 
+            <CommitmentFilters
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               selectedMonth={selectedMonth}
@@ -154,7 +155,7 @@ export default function CompanyDetail() {
               onAddClick={() => setIsCommitmentDialogOpen(true)}
             />
 
-            <CommitmentList 
+            <CommitmentList
               commitments={commitments as any}
               onRecordPayment={(id) => {
                 setSelectedCommitment(id);
@@ -164,9 +165,9 @@ export default function CompanyDetail() {
           </TabsContent>
 
           <TabsContent value="users">
-            <CompanyUsersSection 
-              companyId={companyId as Id<"companies">} 
-              isAdmin={company?.userRole === "admin"} 
+            <CompanyUsersSection
+              companyId={companyId as Id<"companies">}
+              isAdmin={company?.userRole === "admin"}
             />
           </TabsContent>
 
@@ -175,14 +176,14 @@ export default function CompanyDetail() {
           </TabsContent>
         </Tabs>
 
-        <CommitmentDialog 
-          isOpen={isCommitmentDialogOpen} 
+        <CommitmentDialog
+          isOpen={isCommitmentDialogOpen}
           onOpenChange={setIsCommitmentDialogOpen}
           companyId={companyId as Id<"companies">}
         />
 
-        <PaymentDialog 
-          isOpen={isPaymentDialogOpen} 
+        <PaymentDialog
+          isOpen={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
           commitmentId={selectedCommitment}
         />

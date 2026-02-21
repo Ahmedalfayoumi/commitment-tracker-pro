@@ -127,6 +127,46 @@ export const addCompanyUser = mutation({
   },
 });
 
+// Update a user's role or name within a company
+export const updateCompanyUser = mutation({
+  args: {
+    companyUserId: v.id("companyUsers"), // The _id of the companyUsers link
+    name: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) throw new Error("Unauthorized");
+
+    const companyUserLink = await ctx.db.get(args.companyUserId);
+    if (!companyUserLink) throw new Error("Company user link not found");
+
+    // Check if current user is admin of this company
+    const currentUserCompanyLink = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", companyUserLink.companyId).eq("userId", currentUserId)
+      )
+      .first();
+
+    if (!currentUserCompanyLink || currentUserCompanyLink.role !== "admin") {
+      throw new Error("Only company admins can update user roles");
+    }
+
+    // Update the user's role in companyUsers table
+    if (args.role) {
+      await ctx.db.patch(args.companyUserId, { role: args.role });
+    }
+
+    // Update the user's name in the users table if provided
+    if (args.name) {
+      await ctx.db.patch(companyUserLink.userId, { name: args.name });
+    }
+
+    return companyUserLink.userId;
+  },
+});
+
 // Get all users for a company
 export const getCompanyUsers = query({
   args: { companyId: v.id("companies") },

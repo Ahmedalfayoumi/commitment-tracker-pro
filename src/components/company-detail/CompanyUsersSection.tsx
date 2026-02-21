@@ -2,204 +2,284 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { UserPlus, Trash2, Shield, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
+import { Loader2, PlusCircle, Trash2, Edit } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { UserEditDialog } from "./UserEditDialog";
 
 interface CompanyUsersSectionProps {
   companyId: Id<"companies">;
   isAdmin: boolean;
 }
 
-export function CompanyUsersSection({ companyId, isAdmin }: CompanyUsersSectionProps) {
-  const users = useQuery(api.companies.getCompanyUsers, { companyId });
-  const addMember = useMutation(api.companies.addCompanyUser);
-  const removeMember = useMutation(api.companies.removeCompanyUser);
+export function CompanyUsersSection({
+  companyId,
+  isAdmin,
+}: CompanyUsersSectionProps) {
+  const companyUsers = useQuery(api.companies.getCompanyUsers, { companyId });
+  const addCompanyUser = useMutation(api.companies.addCompanyUser);
+  const removeCompanyUser = useMutation(api.companies.removeCompanyUser);
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserUsername, setNewUserUsername] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "user">("user");
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    username: "",
-    password: "",
-    role: "user" as "admin" | "user",
-  });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedUserToEdit, setSelectedUserToEdit] = useState<any | null>(null);
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setIsAddingUser(true);
     try {
-      await addMember({
+      await addCompanyUser({
         companyId,
-        ...formData,
+        name: newUserName,
+        username: newUserUsername,
+        password: newUserPassword,
+        role: newUserRole,
       });
       toast.success("تم إضافة المستخدم بنجاح");
-      setIsAddDialogOpen(false);
-      setFormData({ name: "", username: "", password: "", role: "user" });
+      setNewUserName("");
+      setNewUserUsername("");
+      setNewUserPassword("");
+      setNewUserRole("user");
+      setIsAddUserDialogOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "حدث خطأ أثناء إضافة المستخدم");
+      console.error("Error adding user:", error);
+      toast.error("حدث خطأ أثناء إضافة المستخدم");
     } finally {
-      setIsSubmitting(false);
+      setIsAddingUser(false);
     }
   };
 
   const handleRemoveUser = async (companyUserId: Id<"companyUsers">) => {
-    if (!confirm("هل أنت متأكد من حذف هذا المستخدم من الشركة؟")) return;
     try {
-      await removeMember({ companyUserId });
-      toast.success("تم حذف المستخدم من الشركة");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "حدث خطأ أثناء الحذف");
+      await removeCompanyUser({ companyUserId });
+      toast.success("تم حذف المستخدم بنجاح");
+    } catch (error: any) {
+      console.error("Error removing user:", error);
+      toast.error(error.message || "حدث خطأ أثناء حذف المستخدم");
     }
   };
 
+  const handleEditUser = (user: any) => {
+    setSelectedUserToEdit(user);
+    setIsEditDialogOpen(true);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">مستخدمي الشركة</h2>
-          <p className="text-muted-foreground">إدارة الوصول والصلاحيات لموظفي الشركة</p>
-        </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-2xl font-bold">مستخدمو الشركة</CardTitle>
         {isAdmin && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                إضافة مستخدم جديد
+              <Button size="sm" className="h-8 gap-1">
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  إضافة مستخدم
+                </span>
               </Button>
             </DialogTrigger>
-            <DialogContent dir="rtl">
+            <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>إضافة مستخدم جديد للشركة</DialogTitle>\
-                <DialogDescription>أدخل بيانات الحساب الجديد للموظف</DialogDescription>
+                <DialogTitle>إضافة مستخدم جديد</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddUser} className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">الاسم الكامل</Label>
+              <form onSubmit={handleAddUser} className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    الاسم
+                  </Label>
                   <Input
                     id="name"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    className="col-span-3"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="أدخل اسم الموظف"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">اسم المستخدم</Label>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="username" className="text-right">
+                    اسم المستخدم
+                  </Label>
                   <Input
                     id="username"
+                    value={newUserUsername}
+                    onChange={(e) => setNewUserUsername(e.target.value)}
+                    className="col-span-3"
                     required
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="مثال: ali_2024"
-                    dir="ltr"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">كلمة المرور</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••"
-                      dir="ltr"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="password" className="text-right">
+                    كلمة المرور
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    className="col-span-3"
+                    required
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">الصلاحية</Label>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="role" className="text-right">
+                    الدور
+                  </Label>
                   <Select
-                    value={formData.role}
-                    onValueChange={(value: "admin" | "user") => setFormData({ ...formData, role: value })}
+                    value={newUserRole}
+                    onValueChange={(value: "admin" | "user") =>
+                      setNewUserRole(value)
+                    }
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="اختر الدور" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">مستخدم (عرض وإضافة التزامات)</SelectItem>
-                      <SelectItem value="admin">مسؤول (إدارة كاملة للشركة)</SelectItem>
+                      <SelectItem value="admin">مسؤول</SelectItem>
+                      <SelectItem value="user">مستخدم</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ المستخدم"}
-                </Button>
+                <DialogFooter>
+                  <Button type="submit" disabled={isAddingUser}>
+                    {isAddingUser ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "إضافة"
+                    )}
+                  </Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         )}
-      </div>
-
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-right">المستخدم</TableHead>
-              <TableHead className="text-right">اسم المستخدم</TableHead>
-              <TableHead className="text-right">الصلاحية</TableHead>
-              {isAdmin && <TableHead className="text-left">الإجراءات</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users?.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell className="font-medium">{user.name || "بدون اسم"}</TableCell>
-                <TableCell dir="ltr" className="text-right">{user.username}</TableCell>
-                <TableCell>
-                  <Badge variant={user.companyUserRole === "admin" ? "default" : "secondary"} className="gap-1">
-                    {user.companyUserRole === "admin" ? (
-                      <Shield className="h-3 w-3" />
-                    ) : (
-                      <User className="h-3 w-3" />
+      </CardHeader>
+      <CardContent>
+        {companyUsers && companyUsers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>الاسم</TableHead>
+                  <TableHead>اسم المستخدم</TableHead>
+                  <TableHead>الدور</TableHead>
+                  {isAdmin && <TableHead className="text-right">الإجراءات</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companyUsers.map((user) => (
+                  <TableRow key={user._id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>
+                      {user.companyUserRole === "admin" ? "مسؤول" : "مستخدم"}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  هل أنت متأكد؟
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  سيتم حذف المستخدم "{user.name}" من هذه الشركة.
+                                  لا يمكن التراجع عن هذا الإجراء.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleRemoveUser(user.companyUserId)
+                                  }
+                                >
+                                  حذف
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
                     )}
-                    {user.companyUserRole === "admin" ? "مسؤول" : "مستخدم"}
-                  </Badge>
-                </TableCell>
-                {isAdmin && (
-                  <TableCell className="text-left">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleRemoveUser(user.companyUserId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {users?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  لا يوجد مستخدمين مضافين حالياً
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </div>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <CardDescription className="text-center py-4">
+            لا يوجد مستخدمون مسجلون لهذه الشركة.
+          </CardDescription>
+        )}
+      </CardContent>
+
+      <UserEditDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        user={selectedUserToEdit}
+      />
+    </Card>
   );
 }
