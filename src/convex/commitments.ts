@@ -151,6 +151,90 @@ export const getCommitments = query({
   },
 });
 
+// Get all commitments for the current user across all companies
+export const getAllUserCommitments = query({
+  args: {
+    searchQuery: v.optional(v.string()),
+    status: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const userCompanies = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const companyIds = userCompanies.map((cu) => cu.companyId);
+    
+    let allCommitments: any[] = [];
+    for (const companyId of companyIds) {
+      const commitments = await ctx.db
+        .query("commitments")
+        .withIndex("by_companyId", (q) => q.eq("companyId", companyId))
+        .collect();
+      
+      const company = await ctx.db.get(companyId);
+      allCommitments = [...allCommitments, ...commitments.map(c => ({ ...c, companyName: company?.nameAr }))];
+    }
+
+    // Sort by due date
+    allCommitments.sort((a, b) => b.dueDate - a.dueDate);
+
+    // Filter by search query
+    if (args.searchQuery) {
+      const search = args.searchQuery.toLowerCase();
+      allCommitments = allCommitments.filter(
+        (c) =>
+          c.commitmentNumber.toLowerCase().includes(search) ||
+          c.account.toLowerCase().includes(search) ||
+          c.description.toLowerCase().includes(search) ||
+          c.companyName?.toLowerCase().includes(search)
+      );
+    }
+
+    if (args.status && args.status !== "all") {
+      allCommitments = allCommitments.filter((c) => c.status === args.status);
+    }
+
+    return allCommitments;
+  },
+});
+
+// Get all active/partial commitments for a user (for payment selection)
+export const getPendingCommitments = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const userCompanies = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const companyIds = userCompanies.map((cu) => cu.companyId);
+    
+    let pending: any[] = [];
+    for (const companyId of companyIds) {
+      const active = await ctx.db
+        .query("commitments")
+        .withIndex("by_companyId", (q) => q.eq("companyId", companyId))
+        .filter((q) => q.or(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("status"), "partialPaid")
+        ))
+        .collect();
+      
+      const company = await ctx.db.get(companyId);
+      pending = [...pending, ...active.map(c => ({ ...c, companyName: company?.nameAr }))];
+    }
+
+    return pending;
+  },
+});
+
 // Update commitment
 export const updateCommitment = mutation({
   args: {

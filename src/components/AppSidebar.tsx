@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   Settings,
   User,
-  CreditCard
+  CreditCard,
+  FileText
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,16 @@ export function AppSidebar() {
       title: "لوحة التحكم",
       url: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      title: "الالتزامات",
+      url: "/commitments",
+      icon: FileText,
+    },
+    {
+      title: "المدفوعات",
+      url: "/payments",
+      icon: CreditCard,
     },
     {
       title: "تسجيل شركة جديدة",

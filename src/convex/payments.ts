@@ -127,3 +127,41 @@ export const getPaymentsByCompany = query({
     return paymentsWithCommitments;
   },
 });
+
+// Get all payments for the current user across all companies
+export const getAllUserPayments = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const userCompanies = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const companyIds = userCompanies.map((cu) => cu.companyId);
+    
+    let allPayments: any[] = [];
+    for (const companyId of companyIds) {
+      const payments = await ctx.db
+        .query("payments")
+        .withIndex("by_companyId", (q) => q.eq("companyId", companyId))
+        .collect();
+      
+      const company = await ctx.db.get(companyId);
+      
+      for (const payment of payments) {
+        const commitment = await ctx.db.get(payment.commitmentId);
+        allPayments.push({
+          ...payment,
+          companyName: company?.nameAr,
+          commitmentNumber: commitment?.commitmentNumber,
+          commitmentAccount: commitment?.account,
+        });
+      }
+    }
+
+    return allPayments.sort((a, b) => b.paymentDate - a.paymentDate);
+  },
+});
