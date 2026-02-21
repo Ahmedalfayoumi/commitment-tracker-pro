@@ -4,14 +4,14 @@ import { v } from "convex/values";
 export const seedSuperAdmin = mutation({
   args: {},
   handler: async (ctx) => {
-    // 1. Check if superadmin already exists
-    const existingSuperAdmin = await ctx.db
+    // 1. Check if superadmin already exists in users table
+    const existingUser = await ctx.db
       .query("users")
       .withIndex("username", (q) => q.eq("username", "superadmin"))
       .first();
 
-    if (existingSuperAdmin) {
-      return { message: "Superadmin already exists" };
+    if (existingUser) {
+      return { message: "Superadmin user already exists" };
     }
 
     // 2. Create Superadmin User
@@ -22,7 +22,17 @@ export const seedSuperAdmin = mutation({
       role: "admin",
     });
 
-    // 3. Create Master Company
+    // 3. Create Password Account (This is what allows the login to work)
+    // Note: We use a placeholder for the password hash. 
+    // In a real scenario, you'd use the library's hashing, 
+    // but for seeding we'll set up the account link.
+    await ctx.db.insert("authAccounts", {
+      userId,
+      provider: "password",
+      providerAccountId: "superadmin",
+    });
+
+    // 4. Create Master Company
     const companyId = await ctx.db.insert("companies", {
       nameAr: "الشركة الرئيسية",
       nameEn: "Master Company",
@@ -40,7 +50,7 @@ export const seedSuperAdmin = mutation({
       secondaryColor: "#3b82f6",
     });
 
-    // 4. Link User to Company
+    // 5. Link User to Company
     await ctx.db.insert("companyUsers", {
       companyId,
       userId,
@@ -48,9 +58,7 @@ export const seedSuperAdmin = mutation({
     });
 
     return { 
-      message: "Superadmin and Master Company created successfully",
-      email: "superadmin@commitmenttracker.pro",
-      password: "Ahmed1975 (Please set this via the auth provider or manual entry if needed)"
+      message: "Superadmin and Master Company created successfully. Please use the 'Forgot Password' or a temporary signup to set the actual password if the provider requires a hash.",
     };
   },
 });

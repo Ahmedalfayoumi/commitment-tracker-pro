@@ -74,19 +74,44 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           <CardDescription>إدارة التزاماتك المالية بكل سهولة</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={(e) => handleAuth(e, "signIn")} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">اسم المستخدم</label>
-              <Input name="username" required placeholder="أدخل اسم المستخدم" disabled={isLoading} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">كلمة المرور</label>
-              <Input name="password" type="password" required placeholder="••••••••" disabled={isLoading} />
-            </div>
-            <Button type="submit" className="w-full gap-2" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "دخول"}
-            </Button>
-          </form>
+          <Tabs defaultValue="signIn" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signIn">دخول</TabsTrigger>
+              <TabsTrigger value="signUp">إنشاء حساب</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="signIn">
+              <form onSubmit={(e) => handleAuth(e, "signIn")} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">اسم المستخدم</label>
+                  <Input name="username" required placeholder="أدخل اسم المستخدم" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">كلمة المرور</label>
+                  <Input name="password" type="password" required placeholder="••••••••" disabled={isLoading} />
+                </div>
+                <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "دخول"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signUp">
+              <form onSubmit={(e) => handleAuth(e, "signUp")} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">اسم المستخدم</label>
+                  <Input name="username" required placeholder="اختر اسم مستخدم" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">كلمة المرور</label>
+                  <Input name="password" type="password" required placeholder="••••••••" disabled={isLoading} />
+                </div>
+                <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء حساب"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <div className="relative w-full">
