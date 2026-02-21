@@ -392,6 +392,35 @@ export const updateCompany = mutation({
   },
 });
 
+// Delete company
+export const deleteCompany = mutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const user = await ctx.db.get(userId);
+    if (user?.role !== ROLES.ADMIN) {
+      throw new Error("Only system admins can delete companies");
+    }
+
+    // Delete company users
+    const companyUsers = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
+      .collect();
+    
+    for (const cu of companyUsers) {
+      await ctx.db.delete(cu._id);
+    }
+
+    // Delete the company record
+    await ctx.db.delete(args.companyId);
+    
+    return { success: true };
+  },
+});
+
 // Generate file upload URL
 export const generateUploadUrl = mutation({
   args: {},

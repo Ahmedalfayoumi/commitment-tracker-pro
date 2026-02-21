@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, PlusCircle, Trash2, Edit } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, Edit, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +72,8 @@ export function CompanyUsersSection({
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUserToEdit, setSelectedUserToEdit] = useState<any | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedUserToView, setSelectedUserToView] = useState<any | null>(null);
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,8 +115,13 @@ export function CompanyUsersSection({
     setIsEditDialogOpen(true);
   };
 
+  const handleViewUser = (user: any) => {
+    setSelectedUserToView(user);
+    setIsViewDialogOpen(true);
+  };
+
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">مستخدمو الشركة</CardTitle>
         {isAdmin && (
@@ -208,10 +215,10 @@ export function CompanyUsersSection({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead>اسم المستخدم</TableHead>
-                  <TableHead>الدور</TableHead>
-                  {isAdmin && <TableHead className="text-right">الإجراءات</TableHead>}
+                  <TableHead className="text-right">الاسم</TableHead>
+                  <TableHead className="text-right">اسم المستخدم</TableHead>
+                  <TableHead className="text-right">الدور</TableHead>
+                  <TableHead className="text-left">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,49 +227,67 @@ export function CompanyUsersSection({
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.username}</TableCell>
                     <TableCell>
-                      {user.companyUserRole === "admin" ? "مسؤول" : "مستخدم"}
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        user.companyUserRole === "admin" 
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                      }`}>
+                        {user.companyUserRole === "admin" ? "مسؤول" : "مستخدم"}
+                      </span>
                     </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  هل أنت متأكد؟
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  سيتم حذف المستخدم "{user.name}" من هذه الشركة.
-                                  لا يمكن التراجع عن هذا الإجراء.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleRemoveUser(user.companyUserId)
-                                  }
-                                >
-                                  حذف
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    )}
+                    <TableCell className="text-left">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleViewUser(user)}
+                          title="عرض"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditUser(user)}
+                              title="تعديل"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent dir="rtl">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    هل أنت متأكد؟
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    سيتم حذف المستخدم "{user.name}" من هذه الشركة.
+                                    لا يمكن التراجع عن هذا الإجراء.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="gap-2">
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      handleRemoveUser(user.companyUserId)
+                                    }
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -280,6 +305,41 @@ export function CompanyUsersSection({
         onOpenChange={setIsEditDialogOpen}
         user={selectedUserToEdit}
       />
+
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل المستخدم</DialogTitle>
+          </DialogHeader>
+          {selectedUserToView && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-3 gap-4">
+                <span className="font-bold">الاسم:</span>
+                <span className="col-span-2">{selectedUserToView.name}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <span className="font-bold">اسم المستخدم:</span>
+                <span className="col-span-2">{selectedUserToView.username}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <span className="font-bold">الدور في الشركة:</span>
+                <span className="col-span-2">
+                  {selectedUserToView.companyUserRole === "admin" ? "مسؤول" : "مستخدم"}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <span className="font-bold">تاريخ الانضمام:</span>
+                <span className="col-span-2">
+                  {new Date(selectedUserToView._creationTime).toLocaleDateString("ar-JO")}
+                </span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewDialogOpen(false)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

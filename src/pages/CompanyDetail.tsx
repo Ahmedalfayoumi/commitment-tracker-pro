@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Navigate, useParams, useNavigate } from "react-router";
+import { Navigate, useParams, useNavigate, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, Plus, DollarSign, FileText, Calendar, Filter, Search, Settings, Upload, Palette, Building2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ const STATUS_LABELS = {
 
 export default function CompanyDetail() {
   const { companyId } = useParams<{ companyId: string }>();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "commitments";
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   
@@ -99,7 +101,7 @@ export default function CompanyDetail() {
   const totalRemaining = totalCommitments - totalPaid;
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -123,7 +125,7 @@ export default function CompanyDetail() {
           </div>
         </div>
 
-        <Tabs defaultValue="commitments" className="space-y-8">
+        <Tabs defaultValue={defaultTab} className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 max-w-[500px]">
             <TabsTrigger value="commitments" className="gap-2">
               <FileText className="h-4 w-4" />
