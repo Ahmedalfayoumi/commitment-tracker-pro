@@ -14,12 +14,39 @@ import {
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Landing() {
   const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleStartNow = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      toast.error("يرجى إدخال اسم المستخدم وكلمة المرور");
+      return;
+    }
+
+    setIsLoggingIn(true);
+    try {
+      // Using 'email' as the key because the password provider looks for this in providerAccountId
+      await signIn("password", { email: username, password });
+      toast.success("تم تسجيل الدخول بنجاح");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("خطأ في اسم المستخدم أو كلمة المرور. يرجى المحاولة مرة أخرى.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGuestAccess = async () => {
     if (isAuthenticated) {
       navigate("/dashboard");
       return;
@@ -29,7 +56,7 @@ export default function Landing() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Guest access error:", error);
-      toast.error("حدث خطأ أثناء محاولة الدخول");
+      toast.error("حدث خطأ أثناء محاولة الدخول كضيف");
     }
   };
 
@@ -45,7 +72,7 @@ export default function Landing() {
             <span className="text-xl font-bold tracking-tight">Commitment Tracker Pro</span>
           </div>
           <div className="flex items-center gap-4">
-            <Button onClick={handleStartNow}>ابدأ الآن</Button>
+            <Button variant="ghost" onClick={handleGuestAccess}>دخول كضيف</Button>
           </div>
         </div>
       </nav>
@@ -53,27 +80,88 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 relative">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,var(--color-primary)_0%,transparent_100%)] opacity-5" />
-        <div className="container mx-auto text-center max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
-              أدر التزاماتك المالية <span className="text-primary">بذكاء واحترافية</span>
-            </h1>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              نظام متكامل لإدارة الشركات والالتزامات المالية الشهرية. تتبع المدفوعات، راقب التدفقات النقدية، ونظم حساباتك في مكان واحد.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="h-14 px-8 text-lg gap-2" onClick={handleStartNow}>
-                ابدأ تجربتك المجانية <ArrowRight className="h-5 w-5 rotate-180" />
-              </Button>
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg">
-                شاهد العرض التجريبي
-              </Button>
-            </div>
-          </motion.div>
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-right"
+            >
+              <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+                أدر التزاماتك المالية <span className="text-primary">بذكاء واحترافية</span>
+              </h1>
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed">
+                نظام متكامل لإدارة الشركات والالتزامات المالية الشهرية. تتبع المدفوعات، راقب التدفقات النقدية، ونظم حساباتك في مكان واحد.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span>إدارة شركات متعددة</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span>تتبع دقيق للمدفوعات</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span>تقارير مالية فورية</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Card className="p-8 shadow-2xl border-primary/10 bg-card/50 backdrop-blur-sm">
+                <div className="mb-6 text-center">
+                  <h2 className="text-2xl font-bold mb-2">تسجيل الدخول</h2>
+                  <p className="text-muted-foreground text-sm">أدخل بيانات الاعتماد الخاصة بك للوصول إلى لوحة التحكم</p>
+                </div>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">اسم المستخدم (البريد الإلكتروني)</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="name@company.com"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="h-12"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">كلمة المرور</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12"
+                      dir="ltr"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 text-lg font-bold mt-4" 
+                    disabled={isLoggingIn}
+                  >
+                    {isLoggingIn ? "جاري تسجيل الدخول..." : "دخول"}
+                  </Button>
+                </form>
+                <div className="mt-6 pt-6 border-t text-center">
+                  <p className="text-sm text-muted-foreground mb-4">أو يمكنك البدء كضيف لتجربة النظام</p>
+                  <Button variant="outline" className="w-full h-12" onClick={handleGuestAccess}>
+                    تجربة كضيف
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
         </div>
       </section>
 
