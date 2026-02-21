@@ -8,19 +8,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Home } from "lucide-react";
-import { Link } from "react-router";
-
+import { Home, Loader2 } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -38,14 +30,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   }, [authLoading, isAuthenticated, navigate, redirectAfterAuth]);
 
-  const handleAuth = async (event: React.FormEvent<HTMLFormElement>, flow: "signIn" | "signUp") => {
+  const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     try {
       const formData = new FormData(event.currentTarget);
-      formData.append("flow", flow);
+      formData.append("flow", "signIn");
       await signIn("password", formData);
-      toast.success(flow === "signIn" ? "تم تسجيل الدخول بنجاح" : "تم إنشاء الحساب بنجاح");
+      toast.success("تم تسجيل الدخول بنجاح");
     } catch (error) {
       console.error("Auth error:", error);
       toast.error(error instanceof Error ? error.message : "حدث خطأ ما");
@@ -73,7 +65,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           <CardDescription>إدارة التزاماتك المالية بكل سهولة</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={(e) => handleAuth(e, "signIn")} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">اسم المستخدم</label>
               <Input name="username" required placeholder="أدخل اسم المستخدم" disabled={isLoading} />
