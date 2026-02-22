@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LayoutGrid, List } from "lucide-react";
+import { useEffect } from "react";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -44,6 +47,14 @@ export default function Commitments() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
   const [viewingCommitment, setViewingCommitment] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("commitmentViewModeGlobal");
+    return (saved as "grid" | "list") || "list";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("commitmentViewModeGlobal", viewMode);
+  }, [viewMode]);
   
   const importCommitments = useAction(api.excel.importCommitments);
   const deleteCommitment = useMutation(api.commitments.deleteCommitment);
@@ -158,8 +169,8 @@ export default function Commitments() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
+        <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
+          <div className="relative flex-1 w-full">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="بحث في الالتزامات أو الشركات..."
@@ -168,24 +179,34 @@ export default function Commitments() {
               className="pr-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="الحالة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الحالات</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-center">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
+              <ToggleGroupItem value="list" aria-label="List View">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="grid" aria-label="Grid View">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid gap-4"}>
           {commitments?.map((commitment) => (
-            <Card key={commitment._id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
+            <Card key={commitment._id} className={`hover:shadow-md transition-shadow ${viewMode === "grid" ? "flex flex-col h-full" : ""}`}>
+              <CardContent className="p-6 flex-1">
+                <div className={`flex ${viewMode === "list" ? "flex-col md:flex-row justify-between gap-4" : "flex-col gap-4"}`}>
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-lg">{commitment.commitmentNumber}</span>
@@ -197,8 +218,8 @@ export default function Commitments() {
                       </Badge>
                     </div>
                     <p className="font-medium">{commitment.account}</p>
-                    <p className="text-sm text-muted-foreground">{commitment.description}</p>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                    <p className="text-sm text-muted-foreground line-clamp-2">{commitment.description}</p>
+                    <div className={`flex flex-wrap gap-4 mt-2 text-sm`}>
                       <div className="flex items-center gap-1">
                         <span className="text-muted-foreground">المدفوع:</span>
                         <span className="text-green-600 font-medium">{formatAmount(commitment.paidAmount || 0)} د.أ</span>
@@ -209,8 +230,8 @@ export default function Commitments() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col md:items-end justify-between gap-4">
-                    <div className="text-left md:text-right">
+                  <div className={`flex ${viewMode === "list" ? "flex-col md:items-end justify-between gap-4" : "flex-col gap-4 mt-4 pt-4 border-t"}`}>
+                    <div className={viewMode === "list" ? "text-left md:text-right" : "flex justify-between items-center"}>
                       <div className="text-2xl font-bold text-primary">
                         {formatAmount(commitment.amount)} د.أ
                       </div>
@@ -218,7 +239,7 @@ export default function Commitments() {
                         تاريخ الاستحقاق: {formatDate(commitment.dueDate)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => setViewingCommitment(commitment)}>
                         <Eye className="h-4 w-4" />
                       </Button>
