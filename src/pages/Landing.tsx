@@ -13,39 +13,22 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Landing() {
-  const { isAuthenticated, signIn } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) {
-      toast.error("يرجى إدخال اسم المستخدم وكلمة المرور");
-      return;
-    }
-
-    setIsLoggingIn(true);
-    try {
-      // Use the object-based signIn for better control
-      await signIn("password", { email: username, password, flow: "signIn" });
-      
-      toast.success("تم تسجيل الدخول بنجاح");
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
       navigate("/dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("خطأ في اسم المستخدم أو كلمة المرور. يرجى المحاولة مرة أخرى.");
-    } finally {
-      setIsLoggingIn(false);
     }
-  };
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden" dir="rtl">
@@ -58,6 +41,9 @@ export default function Landing() {
             </div>
             <span className="text-xl font-bold tracking-tight">Commitment Tracker Pro</span>
           </div>
+          <Button variant="ghost" onClick={() => navigate("/auth")}>
+            تسجيل الدخول
+          </Button>
         </div>
       </nav>
 
@@ -65,20 +51,30 @@ export default function Landing() {
       <section className="pt-32 pb-20 px-4 relative">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,var(--color-primary)_0%,transparent_100%)] opacity-5" />
         <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-right"
             >
-              <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+              <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
                 أدر التزاماتك المالية <span className="text-primary">بذكاء واحترافية</span>
               </h1>
-              <p className="text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed">
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
                 نظام متكامل لإدارة الشركات والالتزامات المالية الشهرية. تتبع المدفوعات، راقب التدفقات النقدية، ونظم حساباتك في مكان واحد.
               </p>
-              <div className="flex flex-wrap gap-4">
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+                <Button size="lg" onClick={() => navigate("/auth")} className="text-lg px-10 h-14 font-bold gap-2">
+                  ابدأ الآن مجاناً
+                  <ArrowRight className="h-5 w-5 rotate-180" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="text-lg px-10 h-14 font-bold">
+                  تسجيل الدخول
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-8">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                   <span>إدارة شركات متعددة</span>
@@ -92,58 +88,6 @@ export default function Landing() {
                   <span>تقارير مالية فورية</span>
                 </div>
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Card className="p-8 shadow-2xl border-primary/10 bg-card/50 backdrop-blur-sm">
-                <div className="mb-6 text-center">
-                  <h2 className="text-2xl font-bold mb-2">تسجيل الدخول</h2>
-                  <p className="text-muted-foreground text-sm">أدخل بيانات الاعتماد الخاصة بك للوصول إلى لوحة التحكم</p>
-                </div>
-                
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-6 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">بيانات مدير النظام للتجربة:</p>
-                  <p className="text-sm font-mono font-bold text-primary">admin / admin</p>
-                </div>
-
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">اسم المستخدم</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="admin"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="h-12"
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">كلمة المرور</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12"
-                      dir="ltr"
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 text-lg font-bold mt-4" 
-                    disabled={isLoggingIn}
-                  >
-                    {isLoggingIn ? "جاري تسجيل الدخول..." : "دخول"}
-                  </Button>
-                </form>
-              </Card>
             </motion.div>
           </div>
         </div>

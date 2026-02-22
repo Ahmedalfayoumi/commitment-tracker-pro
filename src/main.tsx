@@ -10,6 +10,7 @@ import "./index.css";
 import "./types/global.d.ts";
 
 import Landing from "./pages/Landing.tsx";
+import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import RegisterCompany from "./pages/RegisterCompany.tsx";
@@ -55,6 +56,7 @@ createRoot(document.getElementById("root")!).render(
           <RouteSyncer />
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
             
             {/* Authenticated Routes with Sidebar */}
             <Route element={<DashboardLayout />}>
