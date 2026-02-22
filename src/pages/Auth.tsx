@@ -84,11 +84,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </Alert>
           )}
           
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-2 text-center">
-            <p className="text-xs text-muted-foreground mb-1">بيانات مدير النظام:</p>
-            <p className="text-sm font-mono font-bold text-primary">admin / admin</p>
-          </div>
-
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">اسم المستخدم</label>

@@ -65,11 +65,7 @@ export default function Landing() {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-                <Button size="lg" onClick={() => navigate("/auth")} className="text-lg px-10 h-14 font-bold gap-2">
-                  ابدأ الآن مجاناً
-                  <ArrowRight className="h-5 w-5 rotate-180" />
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="text-lg px-10 h-14 font-bold">
+                <Button size="lg" onClick={() => navigate("/auth")} className="text-lg px-10 h-14 font-bold">
                   تسجيل الدخول
                 </Button>
               </div>
