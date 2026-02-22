@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Search } from "lucide-react";
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export function PaymentDialog({
   const allCommitments = useQuery(api.commitments.getAllUserCommitments, {});
   
   const [selectedCommitmentId, setSelectedCommitmentId] = useState<string>(initialCommitmentId || "");
+  const [searchTerm, setSearchTerm] = useState("");
   const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
@@ -51,6 +53,7 @@ export function PaymentDialog({
       } else {
         setSelectedCommitmentId("");
       }
+      setSearchTerm("");
       
       if (amountDue !== undefined) {
         setAmount(amountDue.toString());
@@ -62,6 +65,15 @@ export function PaymentDialog({
       setNotes("");
     }
   }, [payment, amountDue, initialCommitmentId, isOpen]);
+
+  const filteredCommitments = allCommitments?.filter((c) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      c.commitmentNumber.toLowerCase().includes(search) ||
+      c.account.toLowerCase().includes(search) ||
+      (c.companyName && c.companyName.toLowerCase().includes(search))
+    );
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,21 +123,37 @@ export function PaymentDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {!payment && !initialCommitmentId && (
             <div className="space-y-2">
-              <Label>الالتزام *</Label>
+              <Label>البحث عن الالتزام واختياره *</Label>
+              <div className="relative mb-2">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="ابحث برقم الالتزام، الحساب، أو الشركة..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-10"
+                  disabled={isSubmitting}
+                />
+              </div>
               <Select
                 value={selectedCommitmentId}
                 onValueChange={setSelectedCommitmentId}
                 disabled={isSubmitting}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الالتزام..." />
+                  <SelectValue placeholder={searchTerm ? "اختر من نتائج البحث..." : "اختر الالتزام..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {allCommitments?.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.commitmentNumber} - {c.account} ({c.companyName})
-                    </SelectItem>
-                  ))}
+                  {filteredCommitments && filteredCommitments.length > 0 ? (
+                    filteredCommitments.map((c) => (
+                      <SelectItem key={c._id} value={c._id}>
+                        {c.commitmentNumber} - {c.account} ({c.companyName})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      {searchTerm ? "لا توجد نتائج للبحث" : "جاري تحميل الالتزامات..."}
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
