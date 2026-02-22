@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommitmentList } from "@/components/company-detail/CommitmentList";
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
+import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import { formatAmount, formatDate } from "@/lib/utils";
@@ -47,6 +48,8 @@ export default function Commitments() {
   const [sortBy, setSortBy] = useState<"dueDate" | "companyName" | "amount">("dueDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedCommitmentId, setSelectedCommitmentId] = useState<Id<"commitments"> | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
   const [viewingCommitment, setViewingCommitment] = useState<any>(null);
@@ -62,6 +65,11 @@ export default function Commitments() {
     searchQuery,
     status: statusFilter,
   });
+
+  const selectedCommitment = commitments?.find((c) => c._id === selectedCommitmentId);
+  const selectedAmountDue = selectedCommitment
+    ? selectedCommitment.amount - (selectedCommitment.paidAmount || 0)
+    : undefined;
 
   const sortedCommitments = commitments ? [...commitments].sort((a, b) => {
     let comparison = 0;
@@ -224,7 +232,10 @@ export default function Commitments() {
 
         <CommitmentList
           commitments={sortedCommitments as any}
-          onRecordPayment={(id) => navigate(`/payments?commitmentId=${id}`)}
+          onRecordPayment={(id) => {
+            setSelectedCommitmentId(id);
+            setIsPaymentDialogOpen(true);
+          }}
           onEdit={setEditingCommitment}
           onDelete={handleDelete}
           onView={setViewingCommitment}
@@ -243,6 +254,14 @@ export default function Commitments() {
           }}
           companyId={editingCommitment?.companyId || selectedCompanyId || (companies?.[0]?._id as Id<"companies">)}
           commitment={editingCommitment}
+        />
+
+        {/* Payment Dialog */}
+        <PaymentDialog
+          isOpen={isPaymentDialogOpen}
+          onOpenChange={setIsPaymentDialogOpen}
+          commitmentId={selectedCommitmentId ?? undefined}
+          amountDue={selectedAmountDue}
         />
 
         {/* View Commitment Dialog */}
