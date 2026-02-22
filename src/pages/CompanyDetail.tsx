@@ -24,6 +24,7 @@ import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
 import { CompanySettings } from "@/components/company-detail/CompanySettings";
 import { CompanyUsersSection } from "@/components/company-detail/CompanyUsersSection";
 import { UserEditDialog } from "@/components/company-detail/UserEditDialog";
+import { formatAmount, formatDate } from "@/lib/utils";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -72,10 +73,19 @@ export default function CompanyDetail() {
   const [isCommitmentDialogOpen, setIsCommitmentDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedCommitmentId, setSelectedCommitmentId] = useState<Id<"commitments"> | null>(null);
+  const [editingCommitment, setEditingCommitment] = useState<any>(null);
+  const [viewingCommitment, setViewingCommitment] = useState<any>(null);
 
-  // Find the selected commitment to get its remaining amount
-  const selectedCommitment = commitments?.find(c => c._id === selectedCommitmentId);
-  const amountDue = selectedCommitment ? selectedCommitment.amount - selectedCommitment.paidAmount : 0;
+  const deleteCommitment = useMutation(api.commitments.deleteCommitment);
+
+  const handleDeleteCommitment = async (id: Id<"commitments">) => {
+    try {
+      await deleteCommitment({ commitmentId: id });
+      toast.success("تم حذف الالتزام بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء حذف الالتزام");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -107,6 +117,12 @@ export default function CompanyDetail() {
 
   const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdmin = company?.userRole === "admin";
+  const isAdmin = isSystemAdmin || isCompanyAdmin;
+
+  const selectedCommitment = commitments?.find((c) => c._id === selectedCommitmentId);
+  const selectedAmountDue = selectedCommitment
+    ? selectedCommitment.amount - (selectedCommitment.paidAmount || 0)
+    : undefined;
 
   return (
     <div className="p-6 lg:p-8" dir="rtl">
@@ -171,6 +187,10 @@ export default function CompanyDetail() {
                 setSelectedCommitmentId(id);
                 setIsPaymentDialogOpen(true);
               }}
+              onEdit={setEditingCommitment}
+              onDelete={handleDeleteCommitment}
+              onView={setViewingCommitment}
+              isAdmin={isAdmin}
             />
           </TabsContent>
 
@@ -187,16 +207,74 @@ export default function CompanyDetail() {
         </Tabs>
 
         <CommitmentDialog
-          isOpen={isCommitmentDialogOpen}
-          onOpenChange={setIsCommitmentDialogOpen}
+          isOpen={isCommitmentDialogOpen || !!editingCommitment}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsCommitmentDialogOpen(false);
+              setEditingCommitment(null);
+            }
+          }}
           companyId={companyId as Id<"companies">}
+          commitment={editingCommitment}
         />
+
+        {/* View Commitment Dialog */}
+        <Dialog open={!!viewingCommitment} onOpenChange={(open) => !open && setViewingCommitment(null)}>
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تفاصيل الالتزام</DialogTitle>
+            </DialogHeader>
+            {viewingCommitment && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الرقم:</span>
+                  <span className="col-span-2">{viewingCommitment.commitmentNumber}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الحساب:</span>
+                  <span className="col-span-2">{viewingCommitment.account}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المبلغ:</span>
+                  <span className="col-span-2">{formatAmount(viewingCommitment.amount)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المدفوع:</span>
+                  <span className="col-span-2 text-green-600">{formatAmount(viewingCommitment.paidAmount)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">المتبقي:</span>
+                  <span className="col-span-2 text-red-600">{formatAmount(viewingCommitment.amount - viewingCommitment.paidAmount)} د.أ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">تاريخ الاستحقاق:</span>
+                  <span className="col-span-2">{formatDate(viewingCommitment.dueDate)}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الحالة:</span>
+                  <span className="col-span-2">
+                    <Badge className={STATUS_COLORS[viewingCommitment.status as keyof typeof STATUS_COLORS]}>
+                      {STATUS_LABELS[viewingCommitment.status as keyof typeof STATUS_LABELS]}
+                    </Badge>
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="font-bold">الوصف:</span>
+                  <span className="col-span-2">{viewingCommitment.description}</span>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={() => setViewingCommitment(null)}>إغلاق</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <PaymentDialog
           isOpen={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
           commitmentId={selectedCommitmentId ?? undefined}
-          amountDue={amountDue}
+          amountDue={selectedAmountDue}
         />
       </motion.div>
     </div>

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CommitmentList } from "@/components/company-detail/CommitmentList";
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
@@ -49,15 +50,10 @@ export default function Commitments() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
   const [viewingCommitment, setViewingCommitment] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
-    const saved = localStorage.getItem("commitmentViewModeGlobal");
-    return (saved as "grid" | "list") || "list";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("commitmentViewModeGlobal", viewMode);
-  }, [viewMode]);
   
+  const currentUser = useQuery(api.users.currentUser);
+  const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+
   const importCommitments = useAction(api.excel.importCommitments);
   const deleteCommitment = useMutation(api.commitments.deleteCommitment);
   const [isImporting, setIsImporting] = useState(false);
@@ -223,182 +219,23 @@ export default function Commitments() {
             >
               <ArrowUpDown className={`h-4 w-4 ${sortOrder === "desc" ? "rotate-180" : ""} transition-transform`} />
             </Button>
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-              <ToggleGroupItem value="list" aria-label="List View">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="grid" aria-label="Grid View">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
         </div>
 
-        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid gap-2"}>
-          {sortedCommitments?.map((commitment) => (
-            <Card key={commitment._id} className={`hover:shadow-md transition-shadow ${viewMode === "grid" ? "flex flex-col h-full" : "overflow-hidden"}`}>
-              <CardContent className={viewMode === "list" ? "p-3" : "p-6 flex-1"}>
-                {viewMode === "list" ? (
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="w-32 font-bold truncate">{commitment.commitmentNumber}</div>
-                    <div className="w-24">
-                      <Badge className={`${STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]} text-[10px] px-1.5 py-0`}>
-                        {STATUS_LABELS[commitment.status as keyof typeof STATUS_LABELS]}
-                      </Badge>
-                    </div>
-                    <div className="w-32 truncate text-xs text-muted-foreground">
-                      {commitment.companyName}
-                    </div>
-                    <div className="flex-1 min-w-0 truncate font-medium">{commitment.account}</div>
-                    <div className="w-24 flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(commitment.dueDate)}
-                    </div>
-                    <div className="w-28 text-left font-bold text-primary">
-                      {formatAmount(commitment.amount)} د.أ
-                    </div>
-                    <div className="w-28 text-left text-green-600">
-                      {formatAmount(commitment.paidAmount || 0)} د.أ
-                    </div>
-                    <div className="w-28 text-left text-red-600">
-                      {formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ
-                    </div>
-                    <div className="flex items-center gap-1 ml-auto">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingCommitment(commitment)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingCommitment(commitment)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-2">
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDelete(commitment._id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              حذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                        <Button 
-                          size="sm" 
-                          className="h-8 px-3 text-xs"
-                          onClick={() => navigate(`/payments?commitmentId=${commitment._id}`)}
-                        >
-                          دفع
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-lg">{commitment.commitmentNumber}</span>
-                        <Badge className={STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]}>
-                          {STATUS_LABELS[commitment.status as keyof typeof STATUS_LABELS]}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {commitment.companyName}
-                        </Badge>
-                      </div>
-                      <p className="font-medium">{commitment.account}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{commitment.description}</p>
-                      <div className="flex flex-wrap gap-4 mt-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">المدفوع:</span>
-                          <span className="text-green-600 font-medium">{formatAmount(commitment.paidAmount || 0)} د.أ</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">المتبقي:</span>
-                          <span className="text-red-600 font-medium">{formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-4 mt-4 pt-4 border-t">
-                      <div className="flex justify-between items-center">
-                        <div className="text-2xl font-bold text-primary">
-                          {formatAmount(commitment.amount)} د.أ
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          تاريخ الاستحقاق: {formatDate(commitment.dueDate)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 justify-end">
-                        <Button variant="ghost" size="icon" onClick={() => setViewingCommitment(commitment)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setEditingCommitment(commitment)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent dir="rtl">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="gap-2">
-                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDelete(commitment._id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                حذف
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                        {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                          <Button 
-                            size="sm" 
-                            className="gap-2"
-                            onClick={() => navigate(`/payments?commitmentId=${commitment._id}`)}
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            تسجيل دفعة
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-          {sortedCommitments?.length === 0 && (
-            <div className="text-center py-12 bg-muted/30 rounded-xl border-2 border-dashed">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-              <p className="text-muted-foreground">لا توجد التزامات مطابقة للبحث</p>
-            </div>
-          )}
-        </div>
+        <CommitmentList
+          commitments={sortedCommitments as any}
+          onRecordPayment={(id) => navigate(`/payments?commitmentId=${id}`)}
+          onEdit={setEditingCommitment}
+          onDelete={handleDelete}
+          onView={setViewingCommitment}
+          isAdmin={isSystemAdmin}
+          showCompanyName={true}
+        />
 
         {/* Add/Edit Commitment Dialog */}
         <CommitmentDialog
           isOpen={isAddDialogOpen || !!editingCommitment}
-          onOpenChange={(open) => {
+          onOpenChange={(open: boolean) => {
             if (!open) {
               setIsAddDialogOpen(false);
               setEditingCommitment(null);

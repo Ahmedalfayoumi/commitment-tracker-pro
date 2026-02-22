@@ -29,6 +29,19 @@ export function formatDate(date: number | string | Date): string {
 }
 
 /**
+ * Returns the number of days between today and the given date.
+ * Positive means future, negative means past.
+ */
+export function getDaysUntil(date: number): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const due = new Date(date);
+  due.setHours(0, 0, 0, 0);
+  const diffTime = due.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Formats a number using Arabic numerals (0-9) with thousands separators
  */
 export function formatNumber(num: number): string {
