@@ -61,7 +61,7 @@ export function CompanyUsersSection({
 }: CompanyUsersSectionProps) {
   const companyUsers = useQuery(api.companies.getCompanyUsers, { companyId });
   const addCompanyUser = useAction(api.companies.addCompanyUser);
-  const removeCompanyUser = useMutation(api.companies.removeCompanyUser);
+  const deleteUser = useMutation(api.users.deleteUser);
 
   const [newUserName, setNewUserName] = useState("");
   const [newUserUsername, setNewUserUsername] = useState("");
@@ -100,9 +100,9 @@ export function CompanyUsersSection({
     }
   };
 
-  const handleRemoveUser = async (companyUserId: Id<"companyUsers">) => {
+  const handleRemoveUser = async (userId: Id<"users">) => {
     try {
-      await removeCompanyUser({ companyUserId });
+      await deleteUser({ userId, companyId });
       toast.success("تم حذف المستخدم بنجاح");
     } catch (error: any) {
       console.error("Error removing user:", error);
@@ -275,7 +275,7 @@ export function CompanyUsersSection({
                                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() =>
-                                      handleRemoveUser(user.companyUserId)
+                                      handleRemoveUser(user._id)
                                     }
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >

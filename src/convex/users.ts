@@ -132,3 +132,70 @@ export const updatePasswordAccount = internalMutation({
     });
   },
 });
+
+export const deleteUser = mutation({
+  args: { 
+    userId: v.id("users"), 
+    companyId: v.optional(v.id("companies")) 
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) throw new Error("Unauthorized");
+
+    const currentUser = await ctx.db.get(currentUserId);
+    const isSystemAdmin = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.SUPERADMIN;
+
+    let isCompanyAdmin = false;
+    if (args.companyId) {
+      const companyUser = await ctx.db
+        .query("companyUsers")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", args.companyId!).eq("userId", currentUserId)
+        )
+        .first();
+      isCompanyAdmin = companyUser?.role === "admin";
+    }
+
+    if (!isSystemAdmin && !isCompanyAdmin) {
+      throw new Error("Only system admins or company admins can delete users");
+    }
+
+    // If company admin, they can only delete users who are in their company
+    if (!isSystemAdmin && isCompanyAdmin && args.companyId) {
+      const targetInCompany = await ctx.db
+        .query("companyUsers")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", args.companyId!).eq("userId", args.userId)
+        )
+        .first();
+      if (!targetInCompany) {
+        throw new Error("User not found in your company");
+      }
+    }
+
+    // Delete all company links for this user
+    const companyLinks = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    for (const link of companyLinks) {
+      await ctx.db.delete(link._id);
+    }
+
+    // Delete auth accounts
+    const accounts = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    for (const account of accounts) {
+      await ctx.db.delete(account._id);
+    }
+
+    // Finally delete the user
+    await ctx.db.delete(args.userId);
+
+    return { success: true };
+  },
+});

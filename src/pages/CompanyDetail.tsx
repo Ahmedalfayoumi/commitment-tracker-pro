@@ -48,6 +48,7 @@ export default function CompanyDetail() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   
+  const currentUser = useQuery(api.users.currentUser);
   const company = useQuery(api.companies.getCompanyById, 
     companyId ? { companyId: companyId as Id<"companies"> } : "skip"
   );
@@ -103,6 +104,9 @@ export default function CompanyDetail() {
   const totalCommitments = commitments?.reduce((sum: number, c: any) => sum + c.amount, 0) || 0;
   const totalPaid = commitments?.reduce((sum: number, c: any) => sum + c.paidAmount, 0) || 0;
   const totalRemaining = totalCommitments - totalPaid;
+
+  const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  const isCompanyAdmin = company?.userRole === "admin";
 
   return (
     <div className="p-6 lg:p-8" dir="rtl">
@@ -173,7 +177,7 @@ export default function CompanyDetail() {
           <TabsContent value="users">
             <CompanyUsersSection
               companyId={companyId as Id<"companies">}
-              isAdmin={company?.userRole === "admin"}
+              isAdmin={isSystemAdmin || isCompanyAdmin}
             />
           </TabsContent>
 
