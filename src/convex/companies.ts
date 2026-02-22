@@ -170,6 +170,7 @@ export const updateCompanyUser = mutation({
     companyUserId: v.id("companyUsers"),
     name: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
@@ -196,6 +197,11 @@ export const updateCompanyUser = mutation({
     // Update the user's role in companyUsers table
     if (args.role) {
       await ctx.db.patch(args.companyUserId, { role: args.role });
+    }
+
+    // Update the company if provided
+    if (args.companyId) {
+      await ctx.db.patch(args.companyUserId, { companyId: args.companyId });
     }
 
     // Update the user's name in the users table if provided

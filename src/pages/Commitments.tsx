@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet, Eye, Edit, Trash2 } from "lucide-react";
+import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet, Eye, Edit, Trash2, Calendar, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,8 @@ export default function Commitments() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"dueDate" | "companyName" | "amount">("dueDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
@@ -64,6 +66,18 @@ export default function Commitments() {
     searchQuery,
     status: statusFilter,
   });
+
+  const sortedCommitments = commitments ? [...commitments].sort((a, b) => {
+    let comparison = 0;
+    if (sortBy === "dueDate") {
+      comparison = a.dueDate - b.dueDate;
+    } else if (sortBy === "companyName") {
+      comparison = (a.companyName || "").localeCompare(b.companyName || "");
+    } else if (sortBy === "amount") {
+      comparison = a.amount - b.amount;
+    }
+    return sortOrder === "asc" ? comparison : -comparison;
+  }) : [];
 
   const companies = useQuery(api.companies.getUserCompanies);
 
@@ -179,9 +193,9 @@ export default function Commitments() {
               className="pr-10"
             />
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="الحالة" />
               </SelectTrigger>
               <SelectContent>
@@ -191,6 +205,24 @@ export default function Commitments() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+              <SelectTrigger className="w-[140px]">
+                <ArrowUpDown className="h-4 w-4 ml-2" />
+                <SelectValue placeholder="فرز حسب" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dueDate">تاريخ الاستحقاق</SelectItem>
+                <SelectItem value="companyName">اسم الشركة</SelectItem>
+                <SelectItem value="amount">المبلغ</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowUpDown className={`h-4 w-4 ${sortOrder === "desc" ? "rotate-180" : ""} transition-transform`} />
+            </Button>
             <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
               <ToggleGroupItem value="list" aria-label="List View">
                 <List className="h-4 w-4" />
@@ -202,53 +234,45 @@ export default function Commitments() {
           </div>
         </div>
 
-        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid gap-4"}>
-          {commitments?.map((commitment) => (
-            <Card key={commitment._id} className={`hover:shadow-md transition-shadow ${viewMode === "grid" ? "flex flex-col h-full" : ""}`}>
-              <CardContent className="p-6 flex-1">
-                <div className={`flex ${viewMode === "list" ? "flex-col md:flex-row justify-between gap-4" : "flex-col gap-4"}`}>
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg">{commitment.commitmentNumber}</span>
-                      <Badge className={STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]}>
+        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid gap-2"}>
+          {sortedCommitments?.map((commitment) => (
+            <Card key={commitment._id} className={`hover:shadow-md transition-shadow ${viewMode === "grid" ? "flex flex-col h-full" : "overflow-hidden"}`}>
+              <CardContent className={viewMode === "list" ? "p-3" : "p-6 flex-1"}>
+                {viewMode === "list" ? (
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="w-32 font-bold truncate">{commitment.commitmentNumber}</div>
+                    <div className="w-24">
+                      <Badge className={`${STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]} text-[10px] px-1.5 py-0`}>
                         {STATUS_LABELS[commitment.status as keyof typeof STATUS_LABELS]}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {commitment.companyName}
-                      </Badge>
                     </div>
-                    <p className="font-medium">{commitment.account}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{commitment.description}</p>
-                    <div className={`flex flex-wrap gap-4 mt-2 text-sm`}>
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">المدفوع:</span>
-                        <span className="text-green-600 font-medium">{formatAmount(commitment.paidAmount || 0)} د.أ</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">المتبقي:</span>
-                        <span className="text-red-600 font-medium">{formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ</span>
-                      </div>
+                    <div className="w-32 truncate text-xs text-muted-foreground">
+                      {commitment.companyName}
                     </div>
-                  </div>
-                  <div className={`flex ${viewMode === "list" ? "flex-col md:items-end justify-between gap-4" : "flex-col gap-4 mt-4 pt-4 border-t"}`}>
-                    <div className={viewMode === "list" ? "text-left md:text-right" : "flex justify-between items-center"}>
-                      <div className="text-2xl font-bold text-primary">
-                        {formatAmount(commitment.amount)} د.أ
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        تاريخ الاستحقاق: {formatDate(commitment.dueDate)}
-                      </div>
+                    <div className="flex-1 min-w-0 truncate font-medium">{commitment.account}</div>
+                    <div className="w-24 flex items-center gap-1 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(commitment.dueDate)}
                     </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => setViewingCommitment(commitment)}>
+                    <div className="w-28 text-left font-bold text-primary">
+                      {formatAmount(commitment.amount)} د.أ
+                    </div>
+                    <div className="w-28 text-left text-green-600">
+                      {formatAmount(commitment.paidAmount || 0)} د.أ
+                    </div>
+                    <div className="w-28 text-left text-red-600">
+                      {formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ
+                    </div>
+                    <div className="flex items-center gap-1 ml-auto">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingCommitment(commitment)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setEditingCommitment(commitment)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingCommitment(commitment)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -273,20 +297,97 @@ export default function Commitments() {
                       {commitment.status !== "paid" && commitment.status !== "cancelled" && (
                         <Button 
                           size="sm" 
-                          className="gap-2"
+                          className="h-8 px-3 text-xs"
                           onClick={() => navigate(`/payments?commitmentId=${commitment._id}`)}
                         >
-                          <CreditCard className="h-4 w-4" />
-                          تسجيل دفعة
+                          دفع
                         </Button>
                       )}
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-lg">{commitment.commitmentNumber}</span>
+                        <Badge className={STATUS_COLORS[commitment.status as keyof typeof STATUS_COLORS]}>
+                          {STATUS_LABELS[commitment.status as keyof typeof STATUS_LABELS]}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {commitment.companyName}
+                        </Badge>
+                      </div>
+                      <p className="font-medium">{commitment.account}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{commitment.description}</p>
+                      <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">المدفوع:</span>
+                          <span className="text-green-600 font-medium">{formatAmount(commitment.paidAmount || 0)} د.أ</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">المتبقي:</span>
+                          <span className="text-red-600 font-medium">{formatAmount(commitment.amount - (commitment.paidAmount || 0))} د.أ</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-4 mt-4 pt-4 border-t">
+                      <div className="flex justify-between items-center">
+                        <div className="text-2xl font-bold text-primary">
+                          {formatAmount(commitment.amount)} د.أ
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          تاريخ الاستحقاق: {formatDate(commitment.dueDate)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button variant="ghost" size="icon" onClick={() => setViewingCommitment(commitment)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingCommitment(commitment)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent dir="rtl">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="gap-2">
+                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(commitment._id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                حذف
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        {commitment.status !== "paid" && commitment.status !== "cancelled" && (
+                          <Button 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => navigate(`/payments?commitmentId=${commitment._id}`)}
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            تسجيل دفعة
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
-          {commitments?.length === 0 && (
+          {sortedCommitments?.length === 0 && (
             <div className="text-center py-12 bg-muted/30 rounded-xl border-2 border-dashed">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
               <p className="text-muted-foreground">لا توجد التزامات مطابقة للبحث</p>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import {
   Dialog,
   DialogContent,
@@ -19,42 +20,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Id } from "@/convex/_generated/dataModel";
-import { KeyRound } from "lucide-react";
 
 interface UserEditDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  companyId?: Id<"companies">;
-  user: {
-    _id: Id<"users">;
-    name: string;
-    username: string;
-    companyUserRole: "admin" | "user";
-    companyUserId: Id<"companyUsers">;
-  } | null;
+  user: any;
+  companyId: Id<"companies">;
 }
 
-export function UserEditDialog({
-  isOpen,
-  onOpenChange,
-  companyId,
-  user,
-}: UserEditDialogProps) {
-  const updateCompanyUser = useMutation(api.companies.updateCompanyUser);
-  const resetPassword = useMutation(api.users.adminResetPassword);
-  const [name, setName] = useState(user?.name || "");
-  const [role, setRole] = useState<"admin" | "user">(user?.companyUserRole || "user");
-  const [newPassword, setNewPassword] = useState("");
+export function UserEditDialog({ isOpen, onOpenChange, user, companyId }: UserEditDialogProps) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<"admin" | "user">("user");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies">>(companyId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const updateCompanyUser = useMutation(api.companies.updateCompanyUser);
+  const companies = useQuery(api.companies.getUserCompanies);
 
   useEffect(() => {
     if (user) {
-      setName(user.name);
-      setRole(user.companyUserRole);
-      setNewPassword("");
+      setName(user.name || "");
+      setRole(user.companyUserRole || "user");
+      setSelectedCompanyId(companyId);
     }
-  }, [user]);
+  }, [user, companyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,20 +55,11 @@ export function UserEditDialog({
         companyUserId: user.companyUserId,
         name,
         role,
+        companyId: selectedCompanyId,
       });
-
-      if (newPassword) {
-        await resetPassword({
-          userId: user._id,
-          newPassword,
-          companyId,
-        });
-      }
-
       toast.success("تم تحديث بيانات المستخدم بنجاح");
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating user:", error);
       toast.error("حدث خطأ أثناء تحديث بيانات المستخدم");
     } finally {
       setIsSubmitting(false);
@@ -88,11 +68,11 @@ export function UserEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]" dir="rtl">
+      <DialogContent dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-right">تعديل المستخدم</DialogTitle>
+          <DialogTitle>تعديل بيانات المستخدم</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">الاسم</Label>
             <Input
@@ -103,42 +83,44 @@ export function UserEditDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="username">اسم المستخدم</Label>
-            <Input
-              id="username"
-              value={user?.username || ""}
-              disabled
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">الدور</Label>
-            <Select value={role} onValueChange={(value: "admin" | "user") => setRole(value)}>
+            <Label htmlFor="role">الصلاحية</Label>
+            <Select value={role} onValueChange={(v: any) => setRole(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر الدور" />
+                <SelectValue placeholder="اختر الصلاحية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">مسؤول</SelectItem>
+                <SelectItem value="admin">مدير</SelectItem>
                 <SelectItem value="user">مستخدم</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 pt-2 border-t">
-            <Label htmlFor="newPassword" title="اتركه فارغاً لعدم التغيير">
-              تغيير كلمة المرور (اختياري)
-            </Label>
-            <div className="relative">
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="كلمة مرور جديدة"
-              />
-              <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="company">الشركة</Label>
+            <Select 
+              value={selectedCompanyId} 
+              onValueChange={(v: any) => setSelectedCompanyId(v as Id<"companies">)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الشركة" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies?.map((company) => (
+                  <SelectItem key={company._id} value={company._id}>
+                    {company.nameAr}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter className="pt-4">
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+          <DialogFooter className="gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              إلغاء
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "جاري الحفظ..." : "حفظ التغييرات"}
             </Button>
           </DialogFooter>
