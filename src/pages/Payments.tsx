@@ -26,9 +26,8 @@ export default function Payments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"paymentDate" | "companyName" | "amount">("paymentDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const payments = useQuery(api.payments.getAllUserPayments);
@@ -80,7 +79,13 @@ export default function Payments() {
             </h1>
             <p className="text-muted-foreground mt-1">سجل وتتبع جميع المدفوعات المالية</p>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+          <Button 
+            onClick={() => {
+              setSelectedPayment(null);
+              setIsPaymentDialogOpen(true);
+            }} 
+            className="gap-2"
+          >
             <Plus className="h-5 w-5" />
             تسجيل دفعة جديدة
           </Button>
@@ -167,7 +172,7 @@ export default function Payments() {
                         size="icon"
                         onClick={() => {
                           setSelectedPayment(payment);
-                          setIsEditDialogOpen(true);
+                          setIsPaymentDialogOpen(true);
                         }}
                       >
                         <Edit className="h-4 w-4" />
@@ -212,8 +217,8 @@ export default function Payments() {
       </motion.div>
 
       <PaymentDialog 
-        isOpen={isEditDialogOpen} 
-        onOpenChange={setIsEditDialogOpen} 
+        isOpen={isPaymentDialogOpen} 
+        onOpenChange={setIsPaymentDialogOpen} 
         payment={selectedPayment} 
       />
 

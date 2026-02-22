@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -15,19 +15,23 @@ interface PaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   commitmentId?: Id<"commitments">;
   amountDue?: number;
-  payment?: any; // Added payment prop for editing
+  payment?: any;
 }
 
 export function PaymentDialog({
   isOpen,
   onOpenChange,
-  commitmentId,
+  commitmentId: initialCommitmentId,
   amountDue,
-  payment, // Destructure payment
+  payment,
 }: PaymentDialogProps) {
   const createPayment = useMutation(api.payments.createPayment);
-  const updatePayment = useMutation(api.payments.updatePayment); // Added update mutation
+  const updatePayment = useMutation(api.payments.updatePayment);
   
+  // Fetch commitments for selection if no commitmentId is provided (global add)
+  const allCommitments = useQuery(api.commitments.getAllUserCommitments, {});
+  
+  const [selectedCommitmentId, setSelectedCommitmentId] = useState<string>(initialCommitmentId || "");
   const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
@@ -40,14 +44,31 @@ export function PaymentDialog({
       setPaymentMethod(payment.paymentMethod);
       setPaymentDate(new Date(payment.paymentDate));
       setNotes(payment.notes || "");
-    } else if (amountDue !== undefined) {
-      setAmount(amountDue.toString());
+      setSelectedCommitmentId(payment.commitmentId);
+    } else {
+      if (initialCommitmentId) {
+        setSelectedCommitmentId(initialCommitmentId);
+      } else {
+        setSelectedCommitmentId("");
+      }
+      
+      if (amountDue !== undefined) {
+        setAmount(amountDue.toString());
+      } else {
+        setAmount("");
+      }
+      setPaymentMethod("cash");
+      setPaymentDate(new Date());
+      setNotes("");
     }
-  }, [payment, amountDue, isOpen]);
+  }, [payment, amountDue, initialCommitmentId, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payment && !commitmentId) return;
+    if (!payment && !selectedCommitmentId) {
+      toast.error("يرجى اختيار الالتزام");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -62,7 +83,7 @@ export function PaymentDialog({
         toast.success("تم تحديث الدفعة بنجاح");
       } else {
         await createPayment({
-          commitmentId: commitmentId!,
+          commitmentId: selectedCommitmentId as Id<"commitments">,
           amount: parseFloat(amount),
           paymentMethod: paymentMethod as any,
           paymentDate: paymentDate.getTime(),
@@ -88,6 +109,27 @@ export function PaymentDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!payment && !initialCommitmentId && (
+            <div className="space-y-2">
+              <Label>الالتزام *</Label>
+              <Select
+                value={selectedCommitmentId}
+                onValueChange={setSelectedCommitmentId}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الالتزام..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCommitments?.map((c) => (
+                    <SelectItem key={c._id} value={c._id}>
+                      {c.commitmentNumber} - {c.account} ({c.companyName})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="paymentAmount">المبلغ *</Label>
             <Input
