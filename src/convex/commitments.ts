@@ -294,6 +294,29 @@ export const getPendingCommitments = query({
   },
 });
 
+// Get a single commitment by ID
+export const getCommitmentById = query({
+  args: { commitmentId: v.id("commitments") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const commitment = await ctx.db.get(args.commitmentId);
+    if (!commitment) return null;
+
+    const companyUser = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", commitment.companyId).eq("userId", userId)
+      )
+      .first();
+
+    if (!companyUser) return null;
+
+    return commitment;
+  },
+});
+
 // Update a commitment
 export const updateCommitment = mutation({
   args: {

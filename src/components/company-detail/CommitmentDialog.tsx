@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type CommitmentStatus = "active" | "postponed" | "paid" | "partialPaid" | "cancelled";
 
 interface CommitmentDialogProps {
   isOpen: boolean;
@@ -22,26 +24,40 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
   const updateCommitment = useMutation(api.commitments.updateCommitment);
   const [isLoading, setIsLoading] = useState(false);
   
-  const [form, setForm] = useState({
-    dueDate: commitment ? new Date(commitment.dueDate).toISOString().split('T')[0] : "",
-    account: commitment?.account || "",
-    description: commitment?.description || "",
-    amount: commitment?.amount?.toString() || "",
-    status: commitment?.status || "active",
+  const [form, setForm] = useState<{
+    dueDate: string;
+    account: string;
+    description: string;
+    amount: string;
+    status: CommitmentStatus;
+  }>({
+    dueDate: "",
+    account: "",
+    description: "",
+    amount: "",
+    status: "active",
   });
 
   // Reset form when commitment changes or dialog opens
-  useState(() => {
-    if (commitment) {
+  useEffect(() => {
+    if (commitment && isOpen) {
       setForm({
         dueDate: new Date(commitment.dueDate).toISOString().split('T')[0],
-        account: commitment.account,
-        description: commitment.description,
-        amount: commitment.amount.toString(),
-        status: commitment.status,
+        account: commitment.account || "",
+        description: commitment.description || "",
+        amount: commitment.amount?.toString() || "",
+        status: (commitment.status as CommitmentStatus) || "active",
+      });
+    } else if (isOpen) {
+      setForm({
+        dueDate: "",
+        account: "",
+        description: "",
+        amount: "",
+        status: "active",
       });
     }
-  });
+  }, [commitment, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +141,7 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
               <Label htmlFor="status">الحالة</Label>
               <Select 
                 value={form.status} 
-                onValueChange={(v: any) => setForm({ ...form, status: v })}
+                onValueChange={(v: CommitmentStatus) => setForm({ ...form, status: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
