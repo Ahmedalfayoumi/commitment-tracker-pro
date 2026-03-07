@@ -109,7 +109,11 @@ export default function Dashboard() {
                   </TableHeader>
                   <TableBody>
                     {companies.map((company: any) => (
-                      <TableRow key={company._id}>
+                      <TableRow
+                        key={company._id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/commitments?companyId=${company._id}`)}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {company.logoUrl ? (
@@ -139,7 +143,7 @@ export default function Dashboard() {
                             {company.userRole === "admin" ? "مدير" : "مستخدم"}
                           </span>
                         </TableCell>
-                        <TableCell className="text-left">
+                        <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"

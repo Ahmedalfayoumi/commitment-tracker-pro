@@ -288,6 +288,9 @@ export const getCompanyUsers = query({
     const users = await Promise.all(
       companyUsers.map(async (cu) => {
         const user = await ctx.db.get(cu.userId);
+        if (!user) return null;
+        // Hide system admins from company user lists
+        if (user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN) return null;
         return {
           ...user,
           companyUserRole: cu.role,
@@ -296,7 +299,7 @@ export const getCompanyUsers = query({
       })
     );
 
-    return users;
+    return users.filter((u) => u !== null);
   },
 });
 
