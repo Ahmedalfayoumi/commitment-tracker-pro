@@ -53,7 +53,17 @@ const schema = defineSchema(
       secondaryColor: v.optional(v.string()),
       ownerId: v.id("users"),
       isActive: v.boolean(),
-    }).index("by_ownerId", ["ownerId"]),
+      // Subscription fields
+      subscriptionPlan: v.optional(v.union(
+        v.literal("1month"),
+        v.literal("3months"),
+        v.literal("6months"),
+        v.literal("1year"),
+      )),
+      subscriptionExpiry: v.optional(v.number()),
+      subscriptionExpiryReminderSent: v.optional(v.boolean()),
+    }).index("by_ownerId", ["ownerId"])
+      .index("by_subscriptionExpiry", ["subscriptionExpiry"]),
 
     // Company users (many-to-many relationship)
     companyUsers: defineTable({

@@ -54,6 +54,8 @@ export function AppSidebar() {
     navigate("/");
   };
 
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+
   const navItems = [
     {
       title: "لوحة التحكم",
@@ -80,11 +82,12 @@ export function AppSidebar() {
       url: "/reports",
       icon: BarChart2,
     },
-    {
+    // Only show for admins
+    ...(isAdmin ? [{
       title: "تسجيل شركة جديدة",
       url: "/register-company",
       icon: PlusCircle,
-    },
+    }] : []),
   ];
 
   return (

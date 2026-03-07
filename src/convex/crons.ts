@@ -11,4 +11,12 @@ crons.interval(
   {}
 );
 
+// Run every day to check subscription expiry and send reminders
+crons.interval(
+  "check subscription expiry reminders",
+  { hours: 24 },
+  internal.companies.sendExpiryReminders,
+  {}
+);
+
 export default crons;
