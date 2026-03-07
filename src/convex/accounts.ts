@@ -1,11 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const getCompanyAccounts = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
     return await ctx.db
       .query("accounts")
       .withIndex("by_companyId", (q) => q.eq("companyId", args.companyId))
@@ -17,18 +18,12 @@ export const getCompanyAccounts = query({
 export const getAllUserAccounts = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email))
-      .unique();
-    if (!user) return [];
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     const companyUsers = await ctx.db
       .query("companyUsers")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .take(100);
 
     const companyIds = companyUsers.map((cu) => cu.companyId);
@@ -52,14 +47,8 @@ export const createAccount = mutation({
     companyId: v.id("companies"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email))
-      .unique();
-    if (!user) throw new Error("User not found");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     // Check for duplicate
     const existing = await ctx.db
@@ -73,7 +62,7 @@ export const createAccount = mutation({
     return await ctx.db.insert("accounts", {
       name: args.name.trim(),
       companyId: args.companyId,
-      createdBy: user._id,
+      createdBy: userId,
     });
   },
 });
@@ -84,8 +73,8 @@ export const updateAccount = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
@@ -106,8 +95,8 @@ export const updateAccount = mutation({
 export const deleteAccount = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
     await ctx.db.delete(args.accountId);
   },
 });
