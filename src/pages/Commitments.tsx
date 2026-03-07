@@ -24,7 +24,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LayoutGrid, List } from "lucide-react";
 import { useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -87,8 +86,8 @@ export default function Commitments() {
   // Date filter state
   const [dateFilterMode, setDateFilterMode] = useState<"none" | "months" | "range">("none");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
 
   const currentUser = useQuery(api.users.currentUser);
@@ -113,11 +112,15 @@ export default function Commitments() {
         return selectedMonths.includes(monthKey);
       }
       if (dateFilterMode === "range") {
-        if (dateFrom && c.dueDate < dateFrom.getTime()) return false;
+        if (dateFrom) {
+          const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0);
+          if (c.dueDate < fromDate.getTime()) return false;
+        }
         if (dateTo) {
-          const endOfDay = new Date(dateTo);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (c.dueDate > endOfDay.getTime()) return false;
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          if (c.dueDate > toDate.getTime()) return false;
         }
         return true;
       }
@@ -126,14 +129,14 @@ export default function Commitments() {
 
   const hasDateFilter = dateFilterMode !== "none" && (
     (dateFilterMode === "months" && selectedMonths.length > 0) ||
-    (dateFilterMode === "range" && (dateFrom || dateTo))
+    (dateFilterMode === "range" && (dateFrom !== "" || dateTo !== ""))
   );
 
   const clearDateFilter = () => {
     setDateFilterMode("none");
     setSelectedMonths([]);
-    setDateFrom(undefined);
-    setDateTo(undefined);
+    setDateFrom("");
+    setDateTo("");
   };
 
   const toggleMonth = (month: string) => {
@@ -367,41 +370,21 @@ export default function Commitments() {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">من تاريخ:</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="w-full justify-start text-xs gap-2">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "اختر تاريخ البداية"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={dateFrom}
-                            onSelect={setDateFrom}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="h-8 text-xs"
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">إلى تاريخ:</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="w-full justify-start text-xs gap-2">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {dateTo ? format(dateTo, "dd/MM/yyyy") : "اختر تاريخ النهاية"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={dateTo}
-                            onSelect={setDateTo}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="h-8 text-xs"
+                      />
                     </div>
                   </div>
                 )}
