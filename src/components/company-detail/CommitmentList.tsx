@@ -65,8 +65,6 @@ const HEADERS = [
   { label: "القيمة", width: "w-[100px]" },
   { label: "الحالة", width: "w-[110px]" },
   { label: "المدفوع", width: "w-[100px]" },
-  { label: "طريقة الدفع", width: "w-[100px]" },
-  { label: "تاريخ السداد", width: "w-[110px]" },
   { label: "الرصيد", width: "w-[100px]" },
   { label: "", width: "w-[130px]" },
 ];
@@ -171,16 +169,10 @@ export function CommitmentList({
           {formatAmount(commitment.paidAmount)}
         </div>
 
-        {/* طريقة الدفع */}
-        <div className={cn(HEADERS[7].width, "shrink-0 text-muted-foreground text-xs")}>—</div>
-
-        {/* تاريخ السداد */}
-        <div className={cn(HEADERS[8].width, "shrink-0 text-muted-foreground text-xs")}>—</div>
-
         {/* الرصيد */}
         <div
           className={cn(
-            HEADERS[9].width,
+            HEADERS[7].width,
             "shrink-0 font-bold text-xs",
             amountDue > 0 ? "text-red-500" : "text-green-600"
           )}
@@ -189,7 +181,7 @@ export function CommitmentList({
         </div>
 
         {/* الإجراءات */}
-        <div className={cn(HEADERS[10].width, "shrink-0 flex items-center gap-1 justify-end")}>
+        <div className={cn(HEADERS[8].width, "shrink-0 flex items-center gap-1 justify-end")}>
           <Button
             variant="ghost"
             size="icon"

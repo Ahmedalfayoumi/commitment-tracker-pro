@@ -3,6 +3,7 @@ import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Outlet } from "react-router";
 import { ReactNode } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +32,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
             <SidebarTrigger className="-mr-2" />
             <div className="h-6 w-px bg-border" />
             <div className="flex-1" />
+            <NotificationBell />
           </header>
           <main className="flex-1 overflow-y-auto">
             {children ?? <Outlet />}

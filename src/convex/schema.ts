@@ -51,7 +51,7 @@ const schema = defineSchema(
       faviconStorageId: v.optional(v.id("_storage")),
       primaryColor: v.optional(v.string()),
       secondaryColor: v.optional(v.string()),
-      ownerId: v.id("users"), // Reference to the dedicated admin/owner user
+      ownerId: v.id("users"),
       isActive: v.boolean(),
     }).index("by_ownerId", ["ownerId"]),
 
@@ -68,7 +68,7 @@ const schema = defineSchema(
     // Commitments table
     commitments: defineTable({
       companyId: v.id("companies"),
-      commitmentNumber: v.string(), // Auto-numbered field (e.g., "COM-001")
+      commitmentNumber: v.string(),
       numberPrefix: v.string(),
       numberSequence: v.number(),
       dueDate: v.number(),
@@ -91,7 +91,7 @@ const schema = defineSchema(
 
     // Payments table
     payments: defineTable({
-      commitmentId: v.id("commitments"), // Reference to commitment
+      commitmentId: v.id("commitments"),
       companyId: v.id("companies"),
       amount: v.number(),
       paymentMethod: v.union(
@@ -106,6 +106,25 @@ const schema = defineSchema(
     })
       .index("by_commitmentId", ["commitmentId"])
       .index("by_companyId", ["companyId"]),
+
+    // Notifications table
+    notifications: defineTable({
+      userId: v.id("users"),
+      commitmentId: v.id("commitments"),
+      companyId: v.id("companies"),
+      type: v.union(
+        v.literal("due_3days"),
+        v.literal("due_2days"),
+        v.literal("due_1day"),
+        v.literal("due_today")
+      ),
+      isRead: v.boolean(),
+      message: v.string(),
+      dueDate: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_and_isRead", ["userId", "isRead"])
+      .index("by_commitmentId_and_type", ["commitmentId", "type"]),
   },
   {
     schemaValidation: true,
