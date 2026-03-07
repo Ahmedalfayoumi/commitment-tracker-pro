@@ -6,7 +6,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Route, Routes, useLocation, useParams, Navigate } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
 
@@ -23,7 +23,11 @@ import Reports from "./pages/Reports.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
+// Redirect /company/:companyId to /commitments?companyId=...
+function CompanyRedirect() {
+  const { companyId } = useParams();
+  return <Navigate to={`/commitments?companyId=${companyId}`} replace />;
+}
 
 function RouteSyncer() {
   const location = useLocation();
@@ -68,6 +72,8 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/payments" element={<Payments />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/reports" element={<Reports />} />
+              {/* Redirect old company route */}
+              <Route path="/company/:companyId" element={<CompanyRedirect />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

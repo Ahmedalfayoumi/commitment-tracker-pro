@@ -188,6 +188,12 @@ export const getUserPositions = query({
     const result = [];
     for (const cu of companyUsers) {
       const user = await ctx.db.get(cu.userId);
+      
+      // Hide system admins and superadmins from the permissions list
+      if (user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERADMIN) {
+        continue;
+      }
+
       const userPosition = await ctx.db
         .query("userPositions")
         .withIndex("by_companyId_and_userId", (q) =>
