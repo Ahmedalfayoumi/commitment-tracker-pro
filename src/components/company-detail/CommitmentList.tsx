@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign, Eye, Edit, Trash2, LayoutGrid, List, TrendingDown } from "lucide-react";
+import { Calendar, DollarSign, Eye, Edit, Trash2, LayoutGrid, List, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Id } from "@/convex/_generated/dataModel";
 import { formatAmount, formatDate, getDaysUntil } from "@/lib/utils";
@@ -47,6 +47,9 @@ interface Commitment {
   companyName?: string;
 }
 
+type SortField = "dueDate" | "companyName" | "amount" | "commitmentNumber" | "status";
+type SortOrder = "asc" | "desc";
+
 interface CommitmentListProps {
   commitments: Commitment[] | undefined;
   onRecordPayment: (id: Id<"commitments">) => void;
@@ -55,15 +58,18 @@ interface CommitmentListProps {
   onView?: (commitment: any) => void;
   isAdmin?: boolean;
   showCompanyName?: boolean;
+  sortBy?: SortField;
+  sortOrder?: SortOrder;
+  onSort?: (field: SortField) => void;
 }
 
-const HEADERS = [
-  { label: "رقم الالتزام", width: "w-[130px]" },
-  { label: "تاريخ الاستحقاق", width: "w-[120px]" },
+const HEADERS: { label: string; width: string; sortKey?: SortField }[] = [
+  { label: "رقم الالتزام", width: "w-[130px]", sortKey: "commitmentNumber" },
+  { label: "تاريخ الاستحقاق", width: "w-[120px]", sortKey: "dueDate" },
   { label: "الحساب", width: "w-[130px]" },
   { label: "البيان", width: "w-[180px]" },
-  { label: "القيمة", width: "w-[100px]" },
-  { label: "الحالة", width: "w-[110px]" },
+  { label: "القيمة", width: "w-[100px]", sortKey: "amount" },
+  { label: "الحالة", width: "w-[110px]", sortKey: "status" },
   { label: "المدفوع", width: "w-[100px]" },
   { label: "الرصيد", width: "w-[100px]" },
   { label: "", width: "w-[130px]" },
@@ -77,11 +83,45 @@ export function CommitmentList({
   onView,
   isAdmin,
   showCompanyName = false,
+  sortBy,
+  sortOrder,
+  onSort,
 }: CommitmentListProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("commitmentViewMode");
     return (saved as "grid" | "list") || "list";
   });
+
+  // Internal sort state (used when no external sort is provided)
+  const [internalSortBy, setInternalSortBy] = useState<SortField>("dueDate");
+  const [internalSortOrder, setInternalSortOrder] = useState<SortOrder>("asc");
+
+  const activeSortBy = sortBy ?? internalSortBy;
+  const activeSortOrder = sortOrder ?? internalSortOrder;
+
+  const handleSort = (field: SortField) => {
+    if (onSort) {
+      onSort(field);
+    } else {
+      if (internalSortBy === field) {
+        setInternalSortOrder(internalSortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setInternalSortBy(field);
+        setInternalSortOrder("asc");
+      }
+    }
+  };
+
+  // Sort commitments internally if no external sort provided
+  const sortedCommitments = commitments ? [...commitments].sort((a, b) => {
+    let comparison = 0;
+    if (activeSortBy === "dueDate") comparison = a.dueDate - b.dueDate;
+    else if (activeSortBy === "amount") comparison = a.amount - b.amount;
+    else if (activeSortBy === "commitmentNumber") comparison = a.commitmentNumber.localeCompare(b.commitmentNumber);
+    else if (activeSortBy === "status") comparison = a.status.localeCompare(b.status);
+    else if (activeSortBy === "companyName") comparison = (a.companyName || "").localeCompare(b.companyName || "");
+    return activeSortOrder === "asc" ? comparison : -comparison;
+  }) : [];
 
   useEffect(() => {
     localStorage.setItem("commitmentViewMode", viewMode);
@@ -101,8 +141,37 @@ export function CommitmentList({
     return days < 0 && amountDue > 0;
   };
 
-  const overdueCommitments = commitments?.filter(isOverdue) || [];
-  const regularCommitments = commitments?.filter((c) => !isOverdue(c)) || [];
+  const overdueCommitments = sortedCommitments?.filter(isOverdue) || [];
+  const regularCommitments = sortedCommitments?.filter((c) => !isOverdue(c)) || [];
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (activeSortBy !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return activeSortOrder === "asc"
+      ? <ArrowUp className="h-3 w-3 text-primary" />
+      : <ArrowDown className="h-3 w-3 text-primary" />;
+  };
+
+  const renderHeaderRow = (bgClass: string, textClass: string) => (
+    <div className={`flex flex-row items-center ${bgClass} px-4 py-2.5 border-b min-w-max`} dir="rtl">
+      {HEADERS.map((h, i) => (
+        <div
+          key={i}
+          className={cn(
+            h.width,
+            "shrink-0 text-xs font-bold uppercase tracking-wide",
+            textClass,
+            h.sortKey ? "cursor-pointer select-none hover:opacity-80 transition-opacity" : ""
+          )}
+          onClick={() => h.sortKey && handleSort(h.sortKey)}
+        >
+          <div className="flex items-center gap-1">
+            {h.label}
+            {h.sortKey && <SortIcon field={h.sortKey} />}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   const renderListRow = (commitment: Commitment, index: number) => {
     const daysUntil = getDaysUntil(commitment.dueDate);
@@ -409,14 +478,7 @@ export function CommitmentList({
 
           {viewMode === "list" ? (
             <div className="overflow-x-auto">
-              {/* Table Header */}
-              <div className="flex flex-row items-center bg-red-50/80 dark:bg-red-950/20 px-4 py-2.5 border-b border-red-100 dark:border-red-900/50 min-w-max" dir="rtl">
-                {HEADERS.map((h, i) => (
-                  <div key={i} className={cn(h.width, "shrink-0 text-xs font-bold text-red-700 dark:text-red-400")}>
-                    {h.label}
-                  </div>
-                ))}
-              </div>
+              {renderHeaderRow("bg-red-50/80 dark:bg-red-950/20", "text-red-700 dark:text-red-400")}
               <div className="min-w-max">
                 {overdueCommitments.map((c, i) => renderListRow(c, i))}
               </div>
@@ -440,14 +502,7 @@ export function CommitmentList({
 
         {viewMode === "list" ? (
           <div className="overflow-x-auto">
-            {/* Table Header */}
-            <div className="flex flex-row items-center bg-muted/50 px-4 py-2.5 border-b min-w-max" dir="rtl">
-              {HEADERS.map((h, i) => (
-                <div key={i} className={cn(h.width, "shrink-0 text-xs font-bold text-muted-foreground uppercase tracking-wide")}>
-                  {h.label}
-                </div>
-              ))}
-            </div>
+            {renderHeaderRow("bg-muted/50", "text-muted-foreground")}
             <div className="min-w-max">
               {regularCommitments.map((c, i) => renderListRow(c, i))}
               {commitments?.length === 0 && (

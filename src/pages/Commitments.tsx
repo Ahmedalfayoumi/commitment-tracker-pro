@@ -40,13 +40,15 @@ const STATUS_LABELS = {
   cancelled: "ملغي",
 };
 
+type SortField = "dueDate" | "companyName" | "amount" | "commitmentNumber" | "status";
+
 export default function Commitments() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"dueDate" | "companyName" | "amount">("dueDate");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<SortField>("dueDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedCommitmentId, setSelectedCommitmentId] = useState<Id<"commitments"> | null>(null);
@@ -66,22 +68,19 @@ export default function Commitments() {
     status: statusFilter,
   });
 
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+
   const selectedCommitment = commitments?.find((c) => c._id === selectedCommitmentId);
   const selectedAmountDue = selectedCommitment
     ? selectedCommitment.amount - (selectedCommitment.paidAmount || 0)
     : undefined;
-
-  const sortedCommitments = commitments ? [...commitments].sort((a, b) => {
-    let comparison = 0;
-    if (sortBy === "dueDate") {
-      comparison = a.dueDate - b.dueDate;
-    } else if (sortBy === "companyName") {
-      comparison = (a.companyName || "").localeCompare(b.companyName || "");
-    } else if (sortBy === "amount") {
-      comparison = a.amount - b.amount;
-    }
-    return sortOrder === "asc" ? comparison : -comparison;
-  }) : [];
 
   const companies = useQuery(api.companies.getUserCompanies);
 
@@ -197,41 +196,21 @@ export default function Commitments() {
               className="pr-10"
             />
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="الحالة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-              <SelectTrigger className="w-[140px]">
-                <ArrowUpDown className="h-4 w-4 ml-2" />
-                <SelectValue placeholder="فرز حسب" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dueDate">تاريخ الاستحقاق</SelectItem>
-                <SelectItem value="companyName">اسم الشركة</SelectItem>
-                <SelectItem value="amount">المبلغ</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            >
-              <ArrowUpDown className={`h-4 w-4 ${sortOrder === "desc" ? "rotate-180" : ""} transition-transform`} />
-            </Button>
-          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="الحالة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الحالات</SelectItem>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <CommitmentList
-          commitments={sortedCommitments as any}
+          commitments={commitments as any}
           onRecordPayment={(id) => {
             setSelectedCommitmentId(id);
             setIsPaymentDialogOpen(true);
@@ -241,6 +220,9 @@ export default function Commitments() {
           onView={setViewingCommitment}
           isAdmin={isSystemAdmin}
           showCompanyName={true}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
         />
 
         {/* Add/Edit Commitment Dialog */}
