@@ -60,13 +60,14 @@ export function CompanyUsersSection({
   isAdmin,
 }: CompanyUsersSectionProps) {
   const companyUsers = useQuery(api.companies.getCompanyUsers, { companyId });
+  const positions = useQuery(api.permissions.getPositions, { companyId });
   const addCompanyUser = useAction(api.companies.addCompanyUser);
   const deleteUser = useMutation(api.users.deleteUser);
 
   const [newUserName, setNewUserName] = useState("");
   const [newUserUsername, setNewUserUsername] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"admin" | "user">("user");
+  const [newUserPositionId, setNewUserPositionId] = useState<string>("");
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isAddingUser, setIsAddingUser] = useState(false);
 
@@ -84,13 +85,14 @@ export function CompanyUsersSection({
         name: newUserName,
         username: newUserUsername,
         password: newUserPassword,
-        role: newUserRole,
+        role: "user",
+        positionId: newUserPositionId ? newUserPositionId as Id<"positions"> : undefined,
       });
       toast.success("تم إضافة المستخدم بنجاح");
       setNewUserName("");
       setNewUserUsername("");
       setNewUserPassword("");
-      setNewUserRole("user");
+      setNewUserPositionId("");
       setIsAddUserDialogOpen(false);
     } catch (error) {
       console.error("Error adding user:", error);
@@ -177,21 +179,23 @@ export function CompanyUsersSection({
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="role" className="text-right">
-                    الدور
+                  <Label htmlFor="position" className="text-right">
+                    المنصب
                   </Label>
                   <Select
-                    value={newUserRole}
-                    onValueChange={(value: "admin" | "user") =>
-                      setNewUserRole(value)
-                    }
+                    value={newUserPositionId}
+                    onValueChange={setNewUserPositionId}
                   >
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="اختر الدور" />
+                      <SelectValue placeholder="اختر المنصب (اختياري)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">مسؤول</SelectItem>
-                      <SelectItem value="user">مستخدم</SelectItem>
+                      <SelectItem value="none">بدون منصب</SelectItem>
+                      {positions?.map((position) => (
+                        <SelectItem key={position._id} value={position._id}>
+                          {position.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

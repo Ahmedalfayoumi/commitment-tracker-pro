@@ -30,20 +30,21 @@ interface UserEditDialogProps {
 
 export function UserEditDialog({ isOpen, onOpenChange, user, companyId }: UserEditDialogProps) {
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
-  const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies">>(companyId);
+  const [selectedPositionId, setSelectedPositionId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateCompanyUser = useMutation(api.companies.updateCompanyUser);
-  const companies = useQuery(api.companies.getUserCompanies);
+  const positions = useQuery(api.permissions.getPositions, { companyId });
+  const userPositions = useQuery(api.permissions.getUserPositions, { companyId });
 
   useEffect(() => {
-    if (user) {
+    if (user && userPositions) {
       setName(user.name || "");
-      setRole(user.companyUserRole || "user");
-      setSelectedCompanyId(companyId);
+      // Find the current position for this user
+      const userPos = userPositions.find((up) => up.userId === user._id);
+      setSelectedPositionId(userPos?.positionId || "none");
     }
-  }, [user, companyId]);
+  }, [user, userPositions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +55,9 @@ export function UserEditDialog({ isOpen, onOpenChange, user, companyId }: UserEd
       await updateCompanyUser({
         companyUserId: user.companyUserId,
         name,
-        role,
-        companyId: selectedCompanyId,
+        positionId: selectedPositionId && selectedPositionId !== "none" 
+          ? selectedPositionId as Id<"positions"> 
+          : undefined,
       });
       toast.success("تم تحديث بيانات المستخدم بنجاح");
       onOpenChange(false);
@@ -83,34 +85,25 @@ export function UserEditDialog({ isOpen, onOpenChange, user, companyId }: UserEd
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role">الصلاحية</Label>
-            <Select value={role} onValueChange={(v: any) => setRole(v)}>
+            <Label htmlFor="position">المنصب والصلاحيات</Label>
+            <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر الصلاحية" />
+                <SelectValue placeholder="اختر المنصب" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">مدير</SelectItem>
-                <SelectItem value="user">مستخدم</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="company">الشركة</Label>
-            <Select 
-              value={selectedCompanyId} 
-              onValueChange={(v: any) => setSelectedCompanyId(v as Id<"companies">)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الشركة" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies?.map((company) => (
-                  <SelectItem key={company._id} value={company._id}>
-                    {company.nameAr}
+                <SelectItem value="none">بدون منصب</SelectItem>
+                {positions?.map((position) => (
+                  <SelectItem key={position._id} value={position._id}>
+                    {position.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedPositionId && selectedPositionId !== "none" && positions && (
+              <p className="text-xs text-muted-foreground">
+                الصلاحيات: {positions.find(p => p._id === selectedPositionId)?.permissions?.length || 0} صلاحية
+              </p>
+            )}
           </div>
           <DialogFooter className="gap-2 pt-4">
             <Button

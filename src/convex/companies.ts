@@ -75,6 +75,7 @@ export const addCompanyUser = action({
     username: v.string(),
     password: v.string(),
     role: v.union(v.literal("admin"), v.literal("user")),
+    positionId: v.optional(v.id("positions")),
   },
   handler: async (ctx, args): Promise<Id<"users">> => {
     const userId = await getAuthUserId(ctx);
@@ -98,6 +99,7 @@ export const internalAddCompanyUser = internalMutation({
     username: v.string(),
     password: v.string(), // This will be the hashed password
     role: v.union(v.literal("admin"), v.literal("user")),
+    positionId: v.optional(v.id("positions")),
     currentUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -160,6 +162,34 @@ export const internalAddCompanyUser = internalMutation({
       await ctx.db.patch(existingLink._id, { role: args.role });
     }
 
+    // Assign position if provided
+    if (args.positionId) {
+      const existingPosition = await ctx.db
+        .query("userPositions")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", args.companyId).eq("userId", newUserId)
+        )
+        .first();
+
+      if (existingPosition) {
+        await ctx.db.patch(existingPosition._id, {
+          positionId: args.positionId,
+          grantedPermissions: [],
+          revokedPermissions: [],
+          updatedBy: args.currentUserId,
+        });
+      } else {
+        await ctx.db.insert("userPositions", {
+          companyId: args.companyId,
+          userId: newUserId,
+          positionId: args.positionId,
+          grantedPermissions: [],
+          revokedPermissions: [],
+          updatedBy: args.currentUserId,
+        });
+      }
+    }
+
     return newUserId;
   },
 });
@@ -171,6 +201,7 @@ export const updateCompanyUser = mutation({
     name: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
     companyId: v.optional(v.id("companies")),
+    positionId: v.optional(v.id("positions")),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
@@ -207,6 +238,35 @@ export const updateCompanyUser = mutation({
     // Update the user's name in the users table if provided
     if (args.name) {
       await ctx.db.patch(companyUserLink.userId, { name: args.name });
+    }
+
+    // Update position if provided (positionId can be undefined to clear it)
+    if ("positionId" in args) {
+      const targetCompanyId = args.companyId || companyUserLink.companyId;
+      const existingPosition = await ctx.db
+        .query("userPositions")
+        .withIndex("by_companyId_and_userId", (q) =>
+          q.eq("companyId", targetCompanyId).eq("userId", companyUserLink.userId)
+        )
+        .first();
+
+      if (existingPosition) {
+        await ctx.db.patch(existingPosition._id, {
+          positionId: args.positionId,
+          grantedPermissions: [],
+          revokedPermissions: [],
+          updatedBy: currentUserId,
+        });
+      } else if (args.positionId) {
+        await ctx.db.insert("userPositions", {
+          companyId: targetCompanyId,
+          userId: companyUserLink.userId,
+          positionId: args.positionId,
+          grantedPermissions: [],
+          revokedPermissions: [],
+          updatedBy: currentUserId,
+        });
+      }
     }
 
     return companyUserLink.userId;
