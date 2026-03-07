@@ -2,6 +2,46 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Helper to check if user has a specific permission via position
+async function userHasPermission(ctx: any, userId: any, companyId: any, permission: string): Promise<boolean> {
+  const currentUser = await ctx.db.get(userId);
+  const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  if (isSystemAdmin) return true;
+
+  const companyUser = await ctx.db
+    .query("companyUsers")
+    .withIndex("by_companyId_and_userId", (q: any) =>
+      q.eq("companyId", companyId).eq("userId", userId)
+    )
+    .first();
+
+  if (!companyUser) return false;
+  if (companyUser.role === "admin") return true;
+
+  // Check position-based permissions
+  const userPosition = await ctx.db
+    .query("userPositions")
+    .withIndex("by_companyId_and_userId", (q: any) =>
+      q.eq("companyId", companyId).eq("userId", userId)
+    )
+    .first();
+
+  if (!userPosition) return false;
+
+  let positionPerms: string[] = [];
+  if (userPosition.positionId) {
+    const position = await ctx.db.get(userPosition.positionId);
+    positionPerms = position?.permissions || [];
+  }
+
+  const granted = userPosition.grantedPermissions || [];
+  const revoked = userPosition.revokedPermissions || [];
+  const effective = new Set([...positionPerms, ...granted]);
+  for (const r of revoked) effective.delete(r);
+
+  return effective.has(permission);
+}
+
 // Create a new commitment
 export const createCommitment = mutation({
   args: {
@@ -340,19 +380,8 @@ export const updateCommitment = mutation({
     const commitment = await ctx.db.get(args.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
 
-    const currentUser = await ctx.db.get(userId);
-    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
-
-    const companyUser = await ctx.db
-      .query("companyUsers")
-      .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", commitment.companyId).eq("userId", userId)
-      )
-      .first();
-
-    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
-      throw new Error("Only admins can update commitments");
-    }
+    const canEdit = await userHasPermission(ctx, userId, commitment.companyId, "commitments.edit");
+    if (!canEdit) throw new Error("ليس لديك صلاحية تعديل الالتزامات");
 
     const { commitmentId, ...updates } = args;
     await ctx.db.patch(commitmentId, updates);
@@ -371,19 +400,8 @@ export const deleteCommitment = mutation({
     const commitment = await ctx.db.get(args.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
 
-    const currentUser = await ctx.db.get(userId);
-    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
-
-    const companyUser = await ctx.db
-      .query("companyUsers")
-      .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", commitment.companyId).eq("userId", userId)
-      )
-      .first();
-
-    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
-      throw new Error("Only admins can delete commitments");
-    }
+    const canDelete = await userHasPermission(ctx, userId, commitment.companyId, "commitments.delete");
+    if (!canDelete) throw new Error("ليس لديك صلاحية حذف الالتزامات");
 
     // Delete associated payments
     const payments = await ctx.db

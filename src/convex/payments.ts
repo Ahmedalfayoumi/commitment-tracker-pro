@@ -2,6 +2,46 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Helper to check if user has a specific permission via position
+async function userHasPermission(ctx: any, userId: any, companyId: any, permission: string): Promise<boolean> {
+  const currentUser = await ctx.db.get(userId);
+  const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  if (isSystemAdmin) return true;
+
+  const companyUser = await ctx.db
+    .query("companyUsers")
+    .withIndex("by_companyId_and_userId", (q: any) =>
+      q.eq("companyId", companyId).eq("userId", userId)
+    )
+    .first();
+
+  if (!companyUser) return false;
+  if (companyUser.role === "admin") return true;
+
+  // Check position-based permissions
+  const userPosition = await ctx.db
+    .query("userPositions")
+    .withIndex("by_companyId_and_userId", (q: any) =>
+      q.eq("companyId", companyId).eq("userId", userId)
+    )
+    .first();
+
+  if (!userPosition) return false;
+
+  let positionPerms: string[] = [];
+  if (userPosition.positionId) {
+    const position = await ctx.db.get(userPosition.positionId);
+    positionPerms = position?.permissions || [];
+  }
+
+  const granted = userPosition.grantedPermissions || [];
+  const revoked = userPosition.revokedPermissions || [];
+  const effective = new Set([...positionPerms, ...granted]);
+  for (const r of revoked) effective.delete(r);
+
+  return effective.has(permission);
+}
+
 // Create a payment
 export const createPayment = mutation({
   args: {
@@ -23,14 +63,8 @@ export const createPayment = mutation({
     const commitment = await ctx.db.get(args.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
 
-    const companyUser = await ctx.db
-      .query("companyUsers")
-      .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", commitment.companyId).eq("userId", userId)
-      )
-      .first();
-
-    if (!companyUser) throw new Error("Unauthorized");
+    const canCreate = await userHasPermission(ctx, userId, commitment.companyId, "payments.create");
+    if (!canCreate) throw new Error("ليس لديك صلاحية إنشاء المدفوعات");
 
     // Create payment
     const paymentId = await ctx.db.insert("payments", {
@@ -83,19 +117,8 @@ export const updatePayment = mutation({
     const payment = await ctx.db.get(args.paymentId);
     if (!payment) throw new Error("Payment not found");
 
-    const currentUser = await ctx.db.get(userId);
-    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
-
-    const companyUser = await ctx.db
-      .query("companyUsers")
-      .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", payment.companyId).eq("userId", userId)
-      )
-      .first();
-
-    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
-      throw new Error("Only admins can update payments");
-    }
+    const canEdit = await userHasPermission(ctx, userId, payment.companyId, "payments.create");
+    if (!canEdit) throw new Error("ليس لديك صلاحية تعديل المدفوعات");
 
     const commitment = await ctx.db.get(payment.commitmentId);
     if (!commitment) throw new Error("Commitment not found");
@@ -137,19 +160,8 @@ export const deletePayment = mutation({
     const payment = await ctx.db.get(args.paymentId);
     if (!payment) throw new Error("Payment not found");
 
-    const currentUser = await ctx.db.get(userId);
-    const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
-
-    const companyUser = await ctx.db
-      .query("companyUsers")
-      .withIndex("by_companyId_and_userId", (q) =>
-        q.eq("companyId", payment.companyId).eq("userId", userId)
-      )
-      .first();
-
-    if (!isSystemAdmin && (!companyUser || companyUser.role !== "admin")) {
-      throw new Error("Only admins can delete payments");
-    }
+    const canDelete = await userHasPermission(ctx, userId, payment.companyId, "payments.delete");
+    if (!canDelete) throw new Error("ليس لديك صلاحية حذف المدفوعات");
 
     const commitment = await ctx.db.get(payment.commitmentId);
     if (commitment) {
