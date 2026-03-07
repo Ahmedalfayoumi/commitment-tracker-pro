@@ -279,3 +279,50 @@ export const getAllPermissions = query({
     };
   },
 });
+
+// Get current user's effective permissions for a specific company
+export const getMyPermissions = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const user = await ctx.db.get(userId);
+    // System admins have all permissions
+    if (user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERADMIN) {
+      return ALL_PERMISSIONS as unknown as string[];
+    }
+
+    // Check if company admin
+    const companyUser = await ctx.db
+      .query("companyUsers")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", args.companyId).eq("userId", userId)
+      )
+      .first();
+
+    if (companyUser?.role === "admin") {
+      return ALL_PERMISSIONS as unknown as string[];
+    }
+
+    // Get position-based permissions
+    const userPosition = await ctx.db
+      .query("userPositions")
+      .withIndex("by_companyId_and_userId", (q) =>
+        q.eq("companyId", args.companyId).eq("userId", userId)
+      )
+      .first();
+
+    let positionPerms: string[] = [];
+    if (userPosition?.positionId) {
+      const position = await ctx.db.get(userPosition.positionId);
+      positionPerms = position?.permissions || [];
+    }
+
+    return computeEffectivePermissions(
+      positionPerms,
+      userPosition?.grantedPermissions || [],
+      userPosition?.revokedPermissions || []
+    );
+  },
+});

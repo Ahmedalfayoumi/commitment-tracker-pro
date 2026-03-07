@@ -57,6 +57,9 @@ interface CommitmentListProps {
   onDelete?: (id: Id<"commitments">) => void;
   onView?: (commitment: any) => void;
   isAdmin?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canView?: boolean;
   showCompanyName?: boolean;
   sortBy?: SortField;
   sortOrder?: SortOrder;
@@ -82,6 +85,9 @@ export function CommitmentList({
   onDelete,
   onView,
   isAdmin,
+  canEdit,
+  canDelete,
+  canView,
   showCompanyName = false,
   sortBy,
   sortOrder,
@@ -102,6 +108,11 @@ export function CommitmentList({
 
   const activeSortBy = sortBy ?? internalSortBy;
   const activeSortOrder = sortOrder ?? internalSortOrder;
+
+  // Resolve effective permissions: isAdmin grants all, otherwise use granular props
+  const effectiveCanView = isAdmin || canView !== false;
+  const effectiveCanEdit = isAdmin || canEdit === true;
+  const effectiveCanDelete = isAdmin || canDelete === true;
 
   const handleSort = (field: SortField) => {
     if (onSort) {
@@ -255,56 +266,58 @@ export function CommitmentList({
 
         {/* الإجراءات */}
         <div className={cn(HEADERS[8].width, "shrink-0 flex items-center gap-1 justify-end")}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={() => onView?.(commitment)}
-            title="عرض"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </Button>
-          {isAdmin && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-primary"
-                onClick={() => onEdit?.(commitment)}
-                title="تعديل"
-              >
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    title="حذف"
+          {effectiveCanView && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => onView?.(commitment)}
+              title="عرض"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {effectiveCanEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              onClick={() => onEdit?.(commitment)}
+              title="تعديل"
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {effectiveCanDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="حذف"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent dir="rtl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2">
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDelete?.(commitment._id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent dir="rtl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="gap-2">
-                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => onDelete?.(commitment._id)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      حذف
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
+                    حذف
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           {commitment.status !== "paid" && commitment.status !== "cancelled" && (
             <Button
@@ -391,53 +404,55 @@ export function CommitmentList({
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 border-t mt-auto">
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                onClick={() => onView?.(commitment)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    onClick={() => onEdit?.(commitment)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              {effectiveCanView && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => onView?.(commitment)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+              {effectiveCanEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  onClick={() => onEdit?.(commitment)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
+              {effectiveCanDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent dir="rtl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onDelete?.(commitment._id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent dir="rtl">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => onDelete?.(commitment._id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          حذف
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
+                        حذف
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
             {commitment.status !== "paid" && commitment.status !== "cancelled" && (

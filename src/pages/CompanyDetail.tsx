@@ -88,6 +88,12 @@ export default function CompanyDetail() {
     }
   };
 
+  // Query current user's permissions for this company
+  const myPermissions = useQuery(
+    api.permissions.getMyPermissions,
+    companyId ? { companyId: companyId as Id<"companies"> } : "skip"
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -119,6 +125,10 @@ export default function CompanyDetail() {
   const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const isCompanyAdmin = company?.userRole === "admin";
   const isAdmin = isSystemAdmin || isCompanyAdmin;
+
+  const canEditCommitments = isAdmin || (myPermissions?.includes("commitments.edit") ?? false);
+  const canDeleteCommitments = isAdmin || (myPermissions?.includes("commitments.delete") ?? false);
+  const canViewCommitments = isAdmin || (myPermissions?.includes("commitments.view") ?? false);
 
   const selectedCommitment = commitments?.find((c) => c._id === selectedCommitmentId);
   const selectedAmountDue = selectedCommitment
@@ -195,7 +205,9 @@ export default function CompanyDetail() {
               onEdit={setEditingCommitment}
               onDelete={handleDeleteCommitment}
               onView={setViewingCommitment}
-              isAdmin={isAdmin}
+              canEdit={canEditCommitments}
+              canDelete={canDeleteCommitments}
+              canView={canViewCommitments}
             />
           </TabsContent>
 
