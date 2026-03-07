@@ -99,180 +99,193 @@ export function CommitmentList({
     const amountDue = commitment.amount - commitment.paidAmount;
 
     return (
-      <Card 
+      <div 
         key={commitment._id} 
         className={cn(
-          viewMode === "list" ? "overflow-hidden" : "flex flex-col h-full",
-          overdue && "border-red-500 bg-red-50/50 dark:bg-red-950/10"
+          viewMode === "list" 
+            ? "grid items-center gap-1 text-sm border-b last:border-b-0 py-2 px-3 hover:bg-muted/30 transition-colors"
+            : "",
+          overdue && viewMode === "list" && "bg-red-50/50 dark:bg-red-950/10",
+          viewMode === "list" && (showCompanyName 
+            ? "grid-cols-[1.5fr_1fr_1.5fr_2fr_1fr_1fr_1fr_1fr_1fr_1fr_auto]"
+            : "grid-cols-[1.5fr_1fr_1.5fr_2fr_1fr_1fr_1fr_1fr_1fr_1fr_auto]")
         )}
       >
-        <CardContent className={viewMode === "list" ? "p-3" : "p-6 flex-1"}>
-          {viewMode === "list" ? (
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2 w-32">
-                {indicatorColor && <div className={cn("w-2 h-2 rounded-full shrink-0", indicatorColor)} />}
-                <div className={cn("font-bold truncate", overdue && "text-red-600")}>{commitment.commitmentNumber}</div>
-              </div>
-              <div className="w-24">
-                <Badge className={`${STATUS_COLORS[commitment.status]} text-[10px] px-1.5 py-0`}>
-                  {STATUS_LABELS[commitment.status]}
-                </Badge>
-              </div>
-              {showCompanyName && (
-                <div className="w-32 truncate text-xs text-muted-foreground">
-                  {commitment.companyName}
-                </div>
-              )}
-              <div className="flex-1 min-w-0 truncate font-medium">{commitment.account}</div>
-              <div className={cn("w-24 flex items-center gap-1 text-muted-foreground", overdue && "text-red-600 font-bold")}>
-                <Calendar className="h-3 w-3" />
-                {formatDate(commitment.dueDate)}
-              </div>
-              <div className="w-32 text-left font-bold text-primary">
-                {formatAmount(commitment.amount)} د.أ
-              </div>
-              <div className="w-32 text-left text-green-600">
-                {formatAmount(commitment.paidAmount)} د.أ
-              </div>
-              <div className={cn("w-32 text-left", overdue ? "text-red-600 font-bold" : "text-red-600")}>
-                {formatAmount(amountDue)} د.أ
-              </div>
-              <div className="flex items-center gap-1 ml-auto">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView?.(commitment)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                {isAdmin && (
-                  <>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit?.(commitment)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent dir="rtl">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="gap-2">
-                          <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => onDelete?.(commitment._id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            حذف
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </>
-                )}
-                {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                  <Button
-                    onClick={() => onRecordPayment(commitment._id)}
-                    size="sm"
-                    className="h-8 px-3 text-xs"
-                  >
-                    دفع
-                  </Button>
-                )}
-              </div>
+        {viewMode === "list" ? (
+          <>
+            <div className="flex items-center gap-1.5">
+              {indicatorColor && <div className={cn("w-2 h-2 rounded-full shrink-0", indicatorColor)} />}
+              <span className={cn("font-bold truncate text-xs", overdue && "text-red-600")}>{commitment.commitmentNumber}</span>
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {indicatorColor && <div className={cn("w-3 h-3 rounded-full", indicatorColor)} />}
-                    <h3 className={cn("text-lg font-semibold", overdue && "text-red-600")}>{commitment.commitmentNumber}</h3>
-                    <Badge className={STATUS_COLORS[commitment.status]}>
-                      {STATUS_LABELS[commitment.status]}
-                    </Badge>
-                    {showCompanyName && (
-                      <Badge variant="outline" className="text-xs">
-                        {commitment.companyName}
+            <div className={cn("text-xs", overdue && "text-red-600 font-bold")}>
+              {formatDate(commitment.dueDate)}
+            </div>
+            <div className="text-xs truncate font-medium">{commitment.account}</div>
+            <div className="text-xs truncate text-muted-foreground">{commitment.description}</div>
+            <div className="text-xs font-bold text-primary text-left">
+              {formatAmount(commitment.amount)}
+            </div>
+            <div className="text-xs">
+              <Badge className={`${STATUS_COLORS[commitment.status]} text-[10px] px-1.5 py-0`}>
+                {STATUS_LABELS[commitment.status]}
+              </Badge>
+            </div>
+            <div className="text-xs text-green-600 text-left">
+              {formatAmount(commitment.paidAmount)}
+            </div>
+            <div className="text-xs text-muted-foreground">-</div>
+            <div className="text-xs text-muted-foreground">-</div>
+            <div className={cn("text-xs text-left font-bold", overdue ? "text-red-600" : "text-red-500")}>
+              {formatAmount(amountDue)}
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onView?.(commitment)}>
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+              {isAdmin && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit?.(commitment)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent dir="rtl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onDelete?.(commitment._id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          حذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+              {commitment.status !== "paid" && commitment.status !== "cancelled" && (
+                <Button
+                  onClick={() => onRecordPayment(commitment._id)}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                >
+                  دفع
+                </Button>
+              )}
+            </div>
+          </>
+        ) : (
+          <Card 
+            className={cn(
+              "flex flex-col h-full",
+              overdue && "border-red-500 bg-red-50/50 dark:bg-red-950/10"
+            )}
+          >
+            <CardContent className="p-6 flex-1">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      {indicatorColor && <div className={cn("w-3 h-3 rounded-full", indicatorColor)} />}
+                      <h3 className={cn("text-lg font-semibold", overdue && "text-red-600")}>{commitment.commitmentNumber}</h3>
+                      <Badge className={STATUS_COLORS[commitment.status]}>
+                        {STATUS_LABELS[commitment.status]}
                       </Badge>
+                      {showCompanyName && (
+                        <Badge variant="outline" className="text-xs">
+                          {commitment.companyName}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{commitment.account}</p>
+                    <p className="text-sm mb-4 line-clamp-2">{commitment.description}</p>
+                    <div className="flex flex-col gap-2 text-sm">
+                      <div className={cn("flex items-center gap-2", overdue && "text-red-600 font-bold")}>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{formatDate(commitment.dueDate)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span>المبلغ: {formatAmount(commitment.amount)} د.أ</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600">المدفوع: {formatAmount(commitment.paidAmount)} د.أ</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(overdue ? "text-red-600 font-bold" : "text-red-600")}>
+                          المتبقي: {formatAmount(amountDue)} د.أ
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-row justify-between items-center mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onView?.(commitment)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => onEdit?.(commitment)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent dir="rtl">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="gap-2">
+                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => onDelete?.(commitment._id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                حذف
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">{commitment.account}</p>
-                  <p className="text-sm mb-4 line-clamp-2">{commitment.description}</p>
-                  <div className="flex flex-col gap-2 text-sm">
-                    <div className={cn("flex items-center gap-2", overdue && "text-red-600 font-bold")}>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatDate(commitment.dueDate)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span>المبلغ: {formatAmount(commitment.amount)} د.أ</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-600">المدفوع: {formatAmount(commitment.paidAmount)} د.أ</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn(overdue ? "text-red-600 font-bold" : "text-red-600")}>
-                        المتبقي: {formatAmount(amountDue)} د.أ
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-row justify-between items-center mt-4 pt-4 border-t">
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onView?.(commitment)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {isAdmin && (
-                    <>
-                      <Button variant="ghost" size="icon" onClick={() => onEdit?.(commitment)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              سيتم حذف هذا الالتزام نهائياً. لا يمكن التراجع عن هذا الإجراء.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-2">
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => onDelete?.(commitment._id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              حذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
+                  {commitment.status !== "paid" && commitment.status !== "cancelled" && (
+                    <Button
+                      onClick={() => onRecordPayment(commitment._id)}
+                      size="sm"
+                    >
+                      تسجيل دفعة
+                    </Button>
                   )}
                 </div>
-                {commitment.status !== "paid" && commitment.status !== "cancelled" && (
-                  <Button
-                    onClick={() => onRecordPayment(commitment._id)}
-                    size="sm"
-                  >
-                    تسجيل دفعة
-                  </Button>
-                )}
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     );
   };
+
+  const listCols = showCompanyName
+    ? "grid-cols-[1.5fr_1fr_1.5fr_2fr_1fr_1fr_1fr_1fr_1fr_1fr_auto]"
+    : "grid-cols-[1.5fr_1fr_1.5fr_2fr_1fr_1fr_1fr_1fr_1fr_1fr_auto]";
 
   return (
     <div className="space-y-6">
@@ -287,33 +300,70 @@ export function CommitmentList({
         </ToggleGroup>
       </div>
 
-      {overdueCommitments.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-red-600 font-bold px-1">
-            <div className="w-2 h-6 bg-red-600 rounded-full" />
-            <h2>التزامات متأخرة ({overdueCommitments.length})</h2>
-          </div>
-          <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-2"}>
-            {overdueCommitments.map(renderCommitment)}
-          </div>
+      {/* Table Header - only in list mode */}
+      {viewMode === "list" && (
+        <div className={cn(
+          "grid items-center gap-1 text-xs font-bold bg-muted/60 border rounded-t-lg px-3 py-2 text-right",
+          listCols
+        )} dir="rtl">
+          <div>رقم الالتزام</div>
+          <div>تاريخ الاستحقاق</div>
+          <div>الحساب</div>
+          <div>البيان</div>
+          <div>القيمة</div>
+          <div>الحالة</div>
+          <div>المبلغ المدفوع</div>
+          <div>طريقة الدفع</div>
+          <div>تاريخ السداد</div>
+          <div>الرصيد</div>
+          <div></div>
         </div>
       )}
 
-      <div className="space-y-3">
+      {overdueCommitments.length > 0 && (
+        <div className="space-y-0">
+          <div className="flex items-center gap-2 text-red-600 font-bold px-1 py-2">
+            <div className="w-2 h-6 bg-red-600 rounded-full" />
+            <h2>التزامات متأخرة ({overdueCommitments.length})</h2>
+          </div>
+          {viewMode === "list" ? (
+            <div className="border rounded-b-lg overflow-hidden divide-y">
+              {overdueCommitments.map(renderCommitment)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {overdueCommitments.map(renderCommitment)}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-0">
         {overdueCommitments.length > 0 && (
-          <div className="flex items-center gap-2 text-muted-foreground font-bold px-1 pt-4">
+          <div className="flex items-center gap-2 text-muted-foreground font-bold px-1 py-2 pt-4">
             <div className="w-2 h-6 bg-muted rounded-full" />
             <h2>الالتزامات القادمة</h2>
           </div>
         )}
-        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-2"}>
-          {regularCommitments.map(renderCommitment)}
-          {commitments?.length === 0 && (
-            <div className="text-center py-12 bg-muted/30 rounded-xl border-2 border-dashed">
-              <p className="text-muted-foreground">لا توجد التزامات</p>
-            </div>
-          )}
-        </div>
+        {viewMode === "list" ? (
+          <div className={cn("border overflow-hidden divide-y", overdueCommitments.length === 0 ? "rounded-lg" : "rounded-b-lg")}>
+            {regularCommitments.map(renderCommitment)}
+            {commitments?.length === 0 && (
+              <div className="text-center py-12 bg-muted/30">
+                <p className="text-muted-foreground">لا توجد التزامات</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {regularCommitments.map(renderCommitment)}
+            {commitments?.length === 0 && (
+              <div className="text-center py-12 bg-muted/30 rounded-xl border-2 border-dashed col-span-2">
+                <p className="text-muted-foreground">لا توجد التزامات</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
