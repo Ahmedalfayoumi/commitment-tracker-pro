@@ -142,13 +142,16 @@ function PositionDialog({
   const [selectedPerms, setSelectedPerms] = useState<string[]>(position?.permissions || []);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Reset state when position changes
+  const isEditing = !!position;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { toast.error("يرجى إدخال اسم المنصب"); return; }
     setIsLoading(true);
     try {
       if (position) {
-        await updatePosition({ positionId: position._id, name, permissions: selectedPerms });
+        await updatePosition({ positionId: position._id, name: position.name, permissions: selectedPerms });
         toast.success("تم تحديث المنصب بنجاح");
       } else {
         await createPosition({ companyId, name, permissions: selectedPerms });
@@ -166,24 +169,32 @@ function PositionDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{position ? "تعديل المنصب" : "إنشاء منصب جديد"}</DialogTitle>
+          <DialogTitle>{isEditing ? `تعديل صلاحيات منصب: ${position.name}` : "إنشاء منصب جديد"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>اسم المنصب *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="مثال: محاسب، مدير مالي..."
-              required
-            />
-          </div>
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label>اسم المنصب *</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="مثال: محاسب، مدير مالي..."
+                required
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>الصلاحيات</Label>
+            {isEditing && (
+              <p className="text-sm text-muted-foreground">
+                الصلاحيات المحددة حالياً هي صلاحيات هذا المنصب. قم بتعديلها حسب الحاجة.
+              </p>
+            )}
             <PermissionCheckboxGroup
               permissions={PERMISSION_GROUPS}
               selected={selectedPerms}
               onChange={setSelectedPerms}
+              readonlyHighlight={isEditing ? (position?.permissions || []) : []}
             />
           </div>
           <DialogFooter className="gap-2">
