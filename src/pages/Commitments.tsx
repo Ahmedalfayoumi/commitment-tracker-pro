@@ -68,6 +68,9 @@ export default function Commitments() {
     status: statusFilter,
   });
 
+  // Filter out paid commitments - they only appear in Payments page
+  const filteredCommitments = commitments?.filter(c => c.status !== "paid");
+
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -77,7 +80,7 @@ export default function Commitments() {
     }
   };
 
-  const selectedCommitment = commitments?.find((c) => c._id === selectedCommitmentId);
+  const selectedCommitment = filteredCommitments?.find((c) => c._id === selectedCommitmentId);
   const selectedAmountDue = selectedCommitment
     ? selectedCommitment.amount - (selectedCommitment.paidAmount || 0)
     : undefined;
@@ -210,7 +213,7 @@ export default function Commitments() {
         </div>
 
         <CommitmentList
-          commitments={commitments as any}
+          commitments={filteredCommitments as any}
           onRecordPayment={(id) => {
             setSelectedCommitmentId(id);
             setIsPaymentDialogOpen(true);
