@@ -12,7 +12,8 @@ import {
   User,
   CreditCard,
   FileText,
-  BookOpen
+  BookOpen,
+  BarChart2
 } from "lucide-react";
 import {
   Sidebar,
@@ -73,6 +74,11 @@ export function AppSidebar() {
       title: "الحسابات",
       url: "/accounts",
       icon: BookOpen,
+    },
+    {
+      title: "التقارير",
+      url: "/reports",
+      icon: BarChart2,
     },
     {
       title: "تسجيل شركة جديدة",

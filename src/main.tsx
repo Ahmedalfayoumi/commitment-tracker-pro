@@ -20,6 +20,7 @@ import Commitments from "./pages/Commitments.tsx";
 import Payments from "./pages/Payments.tsx";
 import DashboardLayout from "./components/DashboardLayout.tsx";
 import Accounts from "./pages/Accounts.tsx";
+import Reports from "./pages/Reports.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -68,6 +69,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/commitments" element={<Commitments />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/reports" element={<Reports />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

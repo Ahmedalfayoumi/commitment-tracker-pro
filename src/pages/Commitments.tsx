@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet, Eye, Edit, Trash2, Calendar, ArrowUpDown } from "lucide-react";
+import { FileText, Plus, Search, CreditCard, Upload, Download, FileSpreadsheet, Eye, Edit, Trash2, Calendar, ArrowUpDown, Filter, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LayoutGrid, List } from "lucide-react";
 import { useEffect } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const STATUS_COLORS = {
   active: "bg-blue-500",
@@ -42,6 +47,29 @@ const STATUS_LABELS = {
 
 type SortField = "dueDate" | "companyName" | "amount" | "commitmentNumber" | "status";
 
+// Arabic month names
+const ARABIC_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+];
+
+// Generate month options for the last 2 years + next year
+function generateMonthOptions() {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  const startYear = now.getFullYear() - 1;
+  const endYear = now.getFullYear() + 1;
+  for (let year = endYear; year >= startYear; year--) {
+    for (let month = 11; month >= 0; month--) {
+      const value = `${year}-${String(month + 1).padStart(2, "0")}`;
+      options.push({ value, label: `${ARABIC_MONTHS[month]} ${year}` });
+    }
+  }
+  return options;
+}
+
+const MONTH_OPTIONS = generateMonthOptions();
+
 export default function Commitments() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -55,7 +83,14 @@ export default function Commitments() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
   const [viewingCommitment, setViewingCommitment] = useState<any>(null);
-  
+
+  // Date filter state
+  const [dateFilterMode, setDateFilterMode] = useState<"none" | "months" | "range">("none");
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+
   const currentUser = useQuery(api.users.currentUser);
   const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
 
@@ -69,7 +104,43 @@ export default function Commitments() {
   });
 
   // Filter out paid commitments - they only appear in Payments page
-  const filteredCommitments = commitments?.filter(c => c.status !== "paid");
+  const filteredCommitments = commitments
+    ?.filter(c => c.status !== "paid")
+    ?.filter(c => {
+      if (dateFilterMode === "months" && selectedMonths.length > 0) {
+        const d = new Date(c.dueDate);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return selectedMonths.includes(monthKey);
+      }
+      if (dateFilterMode === "range") {
+        if (dateFrom && c.dueDate < dateFrom.getTime()) return false;
+        if (dateTo) {
+          const endOfDay = new Date(dateTo);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (c.dueDate > endOfDay.getTime()) return false;
+        }
+        return true;
+      }
+      return true;
+    });
+
+  const hasDateFilter = dateFilterMode !== "none" && (
+    (dateFilterMode === "months" && selectedMonths.length > 0) ||
+    (dateFilterMode === "range" && (dateFrom || dateTo))
+  );
+
+  const clearDateFilter = () => {
+    setDateFilterMode("none");
+    setSelectedMonths([]);
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const toggleMonth = (month: string) => {
+    setSelectedMonths(prev =>
+      prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
+    );
+  };
 
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
@@ -189,7 +260,9 @@ export default function Commitments() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
+        {/* Filters Row */}
+        <div className="flex flex-col md:flex-row gap-3 mb-6 items-start md:items-center">
+          {/* Search */}
           <div className="relative flex-1 w-full">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -199,6 +272,8 @@ export default function Commitments() {
               className="pr-10"
             />
           </div>
+
+          {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="الحالة" />
@@ -210,6 +285,147 @@ export default function Commitments() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Date Filter */}
+          <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={hasDateFilter ? "default" : "outline"}
+                className={cn("gap-2 min-w-[130px]", hasDateFilter && "bg-primary text-primary-foreground")}
+              >
+                <Calendar className="h-4 w-4" />
+                {hasDateFilter
+                  ? dateFilterMode === "months"
+                    ? `${selectedMonths.length} شهر`
+                    : "نطاق تاريخ"
+                  : "فلتر التاريخ"}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[340px] p-4" align="end" dir="rtl">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">فلتر بالتاريخ</h3>
+                  {hasDateFilter && (
+                    <Button variant="ghost" size="sm" onClick={clearDateFilter} className="h-7 px-2 text-xs text-destructive hover:text-destructive">
+                      <X className="h-3 w-3 ml-1" />
+                      مسح
+                    </Button>
+                  )}
+                </div>
+
+                {/* Mode Toggle */}
+                <div className="flex gap-2">
+                  <Button
+                    variant={dateFilterMode === "months" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => setDateFilterMode(dateFilterMode === "months" ? "none" : "months")}
+                  >
+                    اختيار أشهر
+                  </Button>
+                  <Button
+                    variant={dateFilterMode === "range" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => setDateFilterMode(dateFilterMode === "range" ? "none" : "range")}
+                  >
+                    نطاق تاريخ
+                  </Button>
+                </div>
+
+                {/* Month Picker */}
+                {dateFilterMode === "months" && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">اختر شهراً أو أكثر:</p>
+                    <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
+                      {MONTH_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => toggleMonth(opt.value)}
+                          className={cn(
+                            "w-full text-right text-sm px-3 py-1.5 rounded-md transition-colors",
+                            selectedMonths.includes(opt.value)
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {selectedMonths.length > 0 && (
+                      <p className="text-xs text-primary font-medium">
+                        تم اختيار {selectedMonths.length} شهر
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Date Range Picker */}
+                {dateFilterMode === "range" && (
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">من تاريخ:</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-start text-xs gap-2">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "اختر تاريخ البداية"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateFrom}
+                            onSelect={setDateFrom}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">إلى تاريخ:</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-start text-xs gap-2">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dateTo ? format(dateTo, "dd/MM/yyyy") : "اختر تاريخ النهاية"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateTo}
+                            onSelect={setDateTo}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+
+                {dateFilterMode !== "none" && (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setDateFilterOpen(false)}
+                  >
+                    تطبيق الفلتر
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Active filter badge */}
+          {hasDateFilter && (
+            <Button variant="ghost" size="sm" onClick={clearDateFilter} className="gap-1 text-xs text-muted-foreground hover:text-destructive px-2">
+              <X className="h-3 w-3" />
+              مسح الفلتر
+            </Button>
+          )}
         </div>
 
         <CommitmentList
