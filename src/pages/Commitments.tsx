@@ -4,9 +4,9 @@ import { useAction, useMutation } from "convex/react";
 import * as XLSX from "xlsx";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, Upload, Download, Eye, Calendar, X, ChevronDown } from "lucide-react";
+import { FileText, Plus, Search, Upload, Download, Eye, Calendar, X, ChevronDown, ArrowRight, Building2, Users, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommitmentList } from "@/components/company-detail/CommitmentList";
 import { CommitmentDialog } from "@/components/company-detail/CommitmentDialog";
 import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
+import { CompanySettings } from "@/components/company-detail/CompanySettings";
+import { CompanyUsersSection } from "@/components/company-detail/CompanyUsersSection";
+import { PermissionsSection } from "@/components/company-detail/PermissionsSection";
+import { SummaryCards } from "@/components/company-detail/SummaryCards";
+import { CommitmentFilters } from "@/components/company-detail/CommitmentFilters";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const STATUS_COLORS = {
@@ -43,6 +49,10 @@ type SortField = "dueDate" | "companyName" | "amount" | "commitmentNumber" | "st
 export default function Commitments() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const companyId = searchParams.get("companyId") as Id<"companies"> | null;
+  const defaultTab = searchParams.get("tab") || "commitments";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortField>("dueDate");
@@ -54,10 +64,13 @@ export default function Commitments() {
   const [editingCommitment, setEditingCommitment] = useState<any>(null);
   const [viewingCommitment, setViewingCommitment] = useState<any>(null);
 
-  // Date range filter state
+  // Date range filter state (global mode)
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
+
+  // Company-specific month filter
+  const [selectedMonth, setSelectedMonth] = useState<string | undefined>();
 
   const currentUser = useQuery(api.users.currentUser);
   const isSystemAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
@@ -66,17 +79,47 @@ export default function Commitments() {
   const deleteCommitment = useMutation(api.commitments.deleteCommitment);
   const [isImporting, setIsImporting] = useState(false);
 
-  const commitments = useQuery(api.commitments.getAllUserCommitments, {
-    searchQuery,
-    status: statusFilter,
-  });
+  // Company-specific data
+  const company = useQuery(
+    api.companies.getCompanyById,
+    companyId ? { companyId } : "skip"
+  );
+
+  const availableMonths = useQuery(
+    api.commitments.getCommitmentMonths,
+    companyId ? { companyId } : "skip"
+  );
+
+  const companyCommitments = useQuery(
+    api.commitments.getCommitments,
+    companyId
+      ? {
+          companyId,
+          searchQuery,
+          month: selectedMonth === "all" ? undefined : selectedMonth,
+        }
+      : "skip"
+  );
+
+  // Global commitments (no companyId)
+  const globalCommitments = useQuery(
+    api.commitments.getAllUserCommitments,
+    !companyId ? { searchQuery, status: statusFilter } : "skip"
+  );
+
+  const myPermissions = useQuery(
+    api.permissions.getMyPermissions,
+    companyId ? { companyId } : "skip"
+  );
+
+  const companies = useQuery(api.companies.getUserCompanies);
 
   const hasDateFilter = dateFrom !== "" || dateTo !== "";
 
-  // Filter out paid commitments and apply date range filter
-  const filteredCommitments = commitments
-    ?.filter(c => c.status !== "paid")
-    ?.filter(c => {
+  // Filter out paid commitments and apply date range filter (global mode)
+  const filteredGlobalCommitments = globalCommitments
+    ?.filter((c) => c.status !== "paid")
+    ?.filter((c) => {
       if (dateFrom) {
         const fromDate = new Date(dateFrom);
         fromDate.setHours(0, 0, 0, 0);
@@ -104,12 +147,22 @@ export default function Commitments() {
     }
   };
 
-  const selectedCommitment = filteredCommitments?.find((c) => c._id === selectedCommitmentId);
+  const isCompanyAdmin = company?.userRole === "admin";
+  const isAdmin = isSystemAdmin || isCompanyAdmin;
+  const canEditCommitments = isAdmin || (myPermissions?.includes("commitments.edit") ?? false);
+  const canDeleteCommitments = isAdmin || (myPermissions?.includes("commitments.delete") ?? false);
+  const canViewCommitments = isAdmin || (myPermissions?.includes("commitments.view") ?? false);
+
+  const activeCommitments = companyId ? companyCommitments : filteredGlobalCommitments;
+
+  const selectedCommitment = activeCommitments?.find((c) => c._id === selectedCommitmentId);
   const selectedAmountDue = selectedCommitment
     ? selectedCommitment.amount - (selectedCommitment.paidAmount || 0)
     : undefined;
 
-  const companies = useQuery(api.companies.getUserCompanies);
+  const totalCommitments = companyCommitments?.reduce((sum: number, c: any) => sum + c.amount, 0) || 0;
+  const totalPaid = companyCommitments?.reduce((sum: number, c: any) => sum + c.paidAmount, 0) || 0;
+  const totalRemaining = totalCommitments - totalPaid;
 
   const handleDelete = async (id: Id<"commitments">) => {
     try {
@@ -127,8 +180,8 @@ export default function Commitments() {
         "الوصف": "فاتورة شهر يناير",
         "المبلغ": 150.50,
         "تاريخ الاستحقاق": "2024-01-25",
-        "الحالة": "نشط"
-      }
+        "الحالة": "نشط",
+      },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
@@ -138,25 +191,19 @@ export default function Commitments() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedCompanyId && companies?.length === 0) return;
+    if (!file) return;
+    const targetCompanyId = companyId || selectedCompanyId || (companies?.[0]?._id as Id<"companies">);
+    if (!targetCompanyId) return;
 
-    const companyId = selectedCompanyId || (companies?.[0]?._id as Id<"companies">);
     setIsImporting(true);
-
     try {
       const reader = new FileReader();
       reader.onload = async (event) => {
         const base64 = (event.target?.result as string).split(",")[1];
-        const result = await importCommitments({
-          companyId,
-          fileData: base64,
-        });
-
+        const result = await importCommitments({ companyId: targetCompanyId, fileData: base64 });
         if (result.success) {
           toast.success(`تم استيراد ${result.importedCount} التزام بنجاح`);
-          if (result.errors) {
-            toast.warning("تم الاستيراد مع وجود بعض الأخطاء، راجع وحدة التحكم");
-          }
+          if (result.errors) toast.warning("تم الاستيراد مع وجود بعض الأخطاء");
         } else {
           toast.error(`فشل الاستيراد: ${result.error}`);
         }
@@ -172,13 +219,139 @@ export default function Commitments() {
   if (isLoading) return <div className="p-8 text-center">جاري التحميل...</div>;
   if (!isAuthenticated) return <Navigate to="/auth" />;
 
+  // Company-specific view
+  if (companyId) {
+    return (
+      <div className="p-6 lg:p-8" dir="rtl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/commitments")} className="gap-2 self-start">
+              <ArrowRight className="h-4 w-4" />
+              العودة للالتزامات
+            </Button>
+            <div className="flex-1 flex items-center gap-4">
+              {company?.logoUrl ? (
+                <img src={company.logoUrl} alt={company.nameAr} className="w-16 h-16 rounded-xl object-cover shadow-md border" />
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center border">
+                  <Building2 className="h-8 w-8 text-primary" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">{company?.nameAr}</h1>
+                <p className="text-muted-foreground text-sm">{company?.nameEn}</p>
+              </div>
+            </div>
+          </div>
+
+          <Tabs defaultValue={defaultTab} className="space-y-8">
+            <TabsList className="grid w-full grid-cols-4 max-w-[650px]">
+              <TabsTrigger value="commitments" className="gap-2">
+                <FileText className="h-4 w-4" />
+                الالتزامات
+              </TabsTrigger>
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="h-4 w-4" />
+                المستخدمين
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="gap-2">
+                <Settings className="h-4 w-4" />
+                الصلاحيات
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                الإعدادات
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="commitments" className="space-y-6">
+              <SummaryCards
+                totalCommitments={totalCommitments}
+                totalPaid={totalPaid}
+                totalRemaining={totalRemaining}
+              />
+              <CommitmentFilters
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                availableMonths={availableMonths}
+                onAddClick={() => setIsAddDialogOpen(true)}
+              />
+              <CommitmentList
+                commitments={companyCommitments as any}
+                onRecordPayment={(id) => { setSelectedCommitmentId(id); setIsPaymentDialogOpen(true); }}
+                onEdit={setEditingCommitment}
+                onDelete={handleDelete}
+                onView={setViewingCommitment}
+                canEdit={canEditCommitments}
+                canDelete={canDeleteCommitments}
+                canView={canViewCommitments}
+              />
+            </TabsContent>
+
+            <TabsContent value="users">
+              <CompanyUsersSection companyId={companyId} isAdmin={isAdmin} />
+            </TabsContent>
+
+            <TabsContent value="permissions">
+              <PermissionsSection companyId={companyId} isAdmin={isAdmin} />
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <CompanySettings company={company} />
+            </TabsContent>
+          </Tabs>
+
+          <CommitmentDialog
+            isOpen={isAddDialogOpen || !!editingCommitment}
+            onOpenChange={(open) => { if (!open) { setIsAddDialogOpen(false); setEditingCommitment(null); } }}
+            companyId={companyId}
+            commitment={editingCommitment}
+          />
+
+          <PaymentDialog
+            isOpen={isPaymentDialogOpen}
+            onOpenChange={setIsPaymentDialogOpen}
+            commitmentId={selectedCommitmentId ?? undefined}
+            amountDue={selectedAmountDue}
+          />
+
+          <Dialog open={!!viewingCommitment} onOpenChange={(open) => !open && setViewingCommitment(null)}>
+            <DialogContent dir="rtl">
+              <DialogHeader><DialogTitle>تفاصيل الالتزام</DialogTitle></DialogHeader>
+              {viewingCommitment && (
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">الرقم:</span><span className="col-span-2">{viewingCommitment.commitmentNumber}</span></div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">الحساب:</span><span className="col-span-2">{viewingCommitment.account}</span></div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">المبلغ:</span><span className="col-span-2">{formatAmount(viewingCommitment.amount)} د.أ</span></div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">المدفوع:</span><span className="col-span-2 text-green-600">{formatAmount(viewingCommitment.paidAmount)} د.أ</span></div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">المتبقي:</span><span className="col-span-2 text-red-600">{formatAmount(viewingCommitment.amount - viewingCommitment.paidAmount)} د.أ</span></div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">تاريخ الاستحقاق:</span><span className="col-span-2">{formatDate(viewingCommitment.dueDate)}</span></div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <span className="font-bold">الحالة:</span>
+                    <span className="col-span-2">
+                      <Badge className={STATUS_COLORS[viewingCommitment.status as keyof typeof STATUS_COLORS]}>
+                        {STATUS_LABELS[viewingCommitment.status as keyof typeof STATUS_LABELS]}
+                      </Badge>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4"><span className="font-bold">الوصف:</span><span className="col-span-2">{viewingCommitment.description}</span></div>
+                </div>
+              )}
+              <div className="flex justify-end"><Button onClick={() => setViewingCommitment(null)}>إغلاق</Button></div>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Global commitments view
   return (
     <div className="p-6 lg:p-8" dir="rtl">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-6xl mx-auto"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -193,13 +366,7 @@ export default function Commitments() {
               تحميل النموذج
             </Button>
             <div className="relative">
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                onChange={handleFileUpload}
-                disabled={isImporting}
-              />
+              <input type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={isImporting} />
               <Button variant="outline" className="gap-2" disabled={isImporting}>
                 <Upload className="h-4 w-4" />
                 {isImporting ? "جاري الاستيراد..." : "استيراد من Excel"}
@@ -214,18 +381,10 @@ export default function Commitments() {
 
         {/* Filters Row */}
         <div className="flex flex-col md:flex-row gap-3 mb-6 items-start md:items-center">
-          {/* Search */}
           <div className="relative flex-1 w-full">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="بحث في الالتزامات أو الشركات..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10"
-            />
+            <Input placeholder="بحث في الالتزامات أو الشركات..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10" />
           </div>
-
-          {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="الحالة" />
@@ -237,14 +396,9 @@ export default function Commitments() {
               ))}
             </SelectContent>
           </Select>
-
-          {/* Date Range Filter */}
           <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
             <PopoverTrigger asChild>
-              <Button
-                variant={hasDateFilter ? "default" : "outline"}
-                className={cn("gap-2 min-w-[130px]", hasDateFilter && "bg-primary text-primary-foreground")}
-              >
+              <Button variant={hasDateFilter ? "default" : "outline"} className={cn("gap-2 min-w-[130px]", hasDateFilter && "bg-primary text-primary-foreground")}>
                 <Calendar className="h-4 w-4" />
                 {hasDateFilter ? "نطاق تاريخ محدد" : "فلتر التاريخ"}
                 <ChevronDown className="h-3 w-3 opacity-60" />
@@ -256,57 +410,34 @@ export default function Commitments() {
                   <h3 className="font-semibold text-sm">فلتر بنطاق التاريخ</h3>
                   {hasDateFilter && (
                     <Button variant="ghost" size="sm" onClick={clearDateFilter} className="h-7 px-2 text-xs text-destructive hover:text-destructive">
-                      <X className="h-3 w-3 ml-1" />
-                      مسح
+                      <X className="h-3 w-3 ml-1" />مسح
                     </Button>
                   )}
                 </div>
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">من تاريخ:</label>
-                    <Input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-8 text-xs"
-                    />
+                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">إلى تاريخ:</label>
-                    <Input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="h-8 text-xs"
-                    />
+                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" />
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setDateFilterOpen(false)}
-                >
-                  تطبيق الفلتر
-                </Button>
+                <Button size="sm" className="w-full" onClick={() => setDateFilterOpen(false)}>تطبيق الفلتر</Button>
               </div>
             </PopoverContent>
           </Popover>
-
-          {/* Active filter badge */}
           {hasDateFilter && (
             <Button variant="ghost" size="sm" onClick={clearDateFilter} className="gap-1 text-xs text-muted-foreground hover:text-destructive px-2">
-              <X className="h-3 w-3" />
-              مسح الفلتر
+              <X className="h-3 w-3" />مسح الفلتر
             </Button>
           )}
         </div>
 
         <CommitmentList
-          commitments={filteredCommitments as any}
-          onRecordPayment={(id) => {
-            setSelectedCommitmentId(id);
-            setIsPaymentDialogOpen(true);
-          }}
+          commitments={filteredGlobalCommitments as any}
+          onRecordPayment={(id) => { setSelectedCommitmentId(id); setIsPaymentDialogOpen(true); }}
           onEdit={setEditingCommitment}
           onDelete={handleDelete}
           onView={setViewingCommitment}
@@ -317,20 +448,13 @@ export default function Commitments() {
           onSort={handleSort}
         />
 
-        {/* Add/Edit Commitment Dialog */}
         <CommitmentDialog
           isOpen={isAddDialogOpen || !!editingCommitment}
-          onOpenChange={(open: boolean) => {
-            if (!open) {
-              setIsAddDialogOpen(false);
-              setEditingCommitment(null);
-            }
-          }}
+          onOpenChange={(open: boolean) => { if (!open) { setIsAddDialogOpen(false); setEditingCommitment(null); } }}
           companyId={editingCommitment?.companyId || selectedCompanyId || (companies?.[0]?._id as Id<"companies">)}
           commitment={editingCommitment}
         />
 
-        {/* Payment Dialog */}
         <PaymentDialog
           isOpen={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
@@ -338,42 +462,18 @@ export default function Commitments() {
           amountDue={selectedAmountDue}
         />
 
-        {/* View Commitment Dialog */}
         <Dialog open={!!viewingCommitment} onOpenChange={(open) => !open && setViewingCommitment(null)}>
           <DialogContent dir="rtl">
-            <DialogHeader>
-              <DialogTitle>تفاصيل الالتزام</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>تفاصيل الالتزام</DialogTitle></DialogHeader>
             {viewingCommitment && (
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">الرقم:</span>
-                  <span className="col-span-2">{viewingCommitment.commitmentNumber}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">الشركة:</span>
-                  <span className="col-span-2">{viewingCommitment.companyName}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">الحساب:</span>
-                  <span className="col-span-2">{viewingCommitment.account}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">المبلغ:</span>
-                  <span className="col-span-2">{formatAmount(viewingCommitment.amount)} د.أ</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">المدفوع:</span>
-                  <span className="col-span-2 text-green-600">{formatAmount(viewingCommitment.paidAmount)} د.أ</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">المتبقي:</span>
-                  <span className="col-span-2 text-red-600">{formatAmount(viewingCommitment.amount - viewingCommitment.paidAmount)} د.أ</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">تاريخ الاستحقاق:</span>
-                  <span className="col-span-2">{formatDate(viewingCommitment.dueDate)}</span>
-                </div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">الرقم:</span><span className="col-span-2">{viewingCommitment.commitmentNumber}</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">الشركة:</span><span className="col-span-2">{viewingCommitment.companyName}</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">الحساب:</span><span className="col-span-2">{viewingCommitment.account}</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">المبلغ:</span><span className="col-span-2">{formatAmount(viewingCommitment.amount)} د.أ</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">المدفوع:</span><span className="col-span-2 text-green-600">{formatAmount(viewingCommitment.paidAmount)} د.أ</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">المتبقي:</span><span className="col-span-2 text-red-600">{formatAmount(viewingCommitment.amount - viewingCommitment.paidAmount)} د.أ</span></div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">تاريخ الاستحقاق:</span><span className="col-span-2">{formatDate(viewingCommitment.dueDate)}</span></div>
                 <div className="grid grid-cols-3 gap-4">
                   <span className="font-bold">الحالة:</span>
                   <span className="col-span-2">
@@ -382,15 +482,10 @@ export default function Commitments() {
                     </Badge>
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="font-bold">الوصف:</span>
-                  <span className="col-span-2">{viewingCommitment.description}</span>
-                </div>
+                <div className="grid grid-cols-3 gap-4"><span className="font-bold">الوصف:</span><span className="col-span-2">{viewingCommitment.description}</span></div>
               </div>
             )}
-            <div className="flex justify-end">
-              <Button onClick={() => setViewingCommitment(null)}>إغلاق</Button>
-            </div>
+            <div className="flex justify-end"><Button onClick={() => setViewingCommitment(null)}>إغلاق</Button></div>
           </DialogContent>
         </Dialog>
       </motion.div>

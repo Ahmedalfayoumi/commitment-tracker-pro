@@ -144,7 +144,7 @@ export default function Dashboard() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigate(`/company/${company._id}`)}
+                              onClick={() => navigate(`/commitments?companyId=${company._id}`)}
                               title="عرض"
                             >
                               <Eye className="h-4 w-4" />
@@ -153,7 +153,7 @@ export default function Dashboard() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => navigate(`/company/${company._id}?tab=settings`)}
+                                onClick={() => navigate(`/commitments?companyId=${company._id}&tab=settings`)}
                                 title="تعديل"
                               >
                                 <Edit className="h-4 w-4" />

@@ -15,7 +15,6 @@ import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import RegisterCompany from "./pages/RegisterCompany.tsx";
-import CompanyDetail from "./pages/CompanyDetail.tsx";
 import Commitments from "./pages/Commitments.tsx";
 import Payments from "./pages/Payments.tsx";
 import DashboardLayout from "./components/DashboardLayout.tsx";
@@ -65,7 +64,6 @@ createRoot(document.getElementById("root")!).render(
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/register-company" element={<RegisterCompany />} />
-              <Route path="/company/:companyId" element={<CompanyDetail />} />
               <Route path="/commitments" element={<Commitments />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/accounts" element={<Accounts />} />
