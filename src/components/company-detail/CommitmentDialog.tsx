@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus } from "lucide-react";
 
 type CommitmentStatus = "active" | "postponed" | "paid" | "partialPaid" | "cancelled";
 
@@ -16,14 +17,22 @@ interface CommitmentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: Id<"companies">;
-  commitment?: any; // Add commitment prop for editing
+  commitment?: any;
 }
 
 export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }: CommitmentDialogProps) {
   const createCommitment = useMutation(api.commitments.createCommitment);
   const updateCommitment = useMutation(api.commitments.updateCommitment);
+  const createAccount = useMutation(api.accounts.createAccount);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+
+  const accounts = useQuery(
+    api.accounts.getCompanyAccounts,
+    companyId ? { companyId } : "skip"
+  );
+
   const [form, setForm] = useState<{
     dueDate: string;
     account: string;
@@ -38,7 +47,6 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
     status: "active",
   });
 
-  // Reset form when commitment changes or dialog opens
   useEffect(() => {
     if (commitment && isOpen) {
       setForm({
@@ -57,7 +65,28 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
         status: "active",
       });
     }
+    setIsAddingAccount(false);
+    setNewAccountName("");
   }, [commitment, isOpen]);
+
+  const handleAddAccount = async () => {
+    if (!newAccountName.trim()) {
+      toast.error("يرجى إدخال اسم الحساب");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createAccount({ name: newAccountName.trim(), companyId });
+      setForm((f) => ({ ...f, account: newAccountName.trim() }));
+      setNewAccountName("");
+      setIsAddingAccount(false);
+      toast.success("تم إضافة الحساب بنجاح");
+    } catch (error: any) {
+      toast.error(error.message || "حدث خطأ أثناء إضافة الحساب");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,22 +154,64 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
               />
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="account">الحساب *</Label>
-            <Input
-              id="account"
-              required
-              value={form.account}
-              onChange={(e) => setForm({ ...form, account: e.target.value })}
-              placeholder="مثال: ضريبة الدخل"
-              disabled={isLoading}
-            />
+            {isAddingAccount ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="اسم الحساب الجديد"
+                  disabled={isLoading}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddAccount())}
+                  autoFocus
+                />
+                <Button type="button" onClick={handleAddAccount} disabled={isLoading} size="sm">
+                  إضافة
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsAddingAccount(false)} disabled={isLoading} size="sm">
+                  إلغاء
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Select
+                  value={form.account}
+                  onValueChange={(v) => setForm({ ...form, account: v })}
+                  required
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="اختر الحساب..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts?.map((a) => (
+                      <SelectItem key={a._id} value={a.name}>{a.name}</SelectItem>
+                    ))}
+                    {accounts?.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">لا توجد حسابات، أضف حساباً جديداً</div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsAddingAccount(true)}
+                  disabled={isLoading}
+                  title="إضافة حساب جديد"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
+
           {commitment && (
             <div className="space-y-2">
               <Label htmlFor="status">الحالة</Label>
-              <Select 
-                value={form.status} 
+              <Select
+                value={form.status}
                 onValueChange={(v: CommitmentStatus) => setForm({ ...form, status: v })}
               >
                 <SelectTrigger>
@@ -156,6 +227,7 @@ export function CommitmentDialog({ isOpen, onOpenChange, companyId, commitment }
               </Select>
             </div>
           )}
+
           <div className="space-y-2">
             <Label htmlFor="description">الوصف *</Label>
             <Textarea

@@ -11,7 +11,8 @@ import {
   Settings,
   User,
   CreditCard,
-  FileText
+  FileText,
+  BookOpen
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,6 +68,11 @@ export function AppSidebar() {
       title: "المدفوعات",
       url: "/payments",
       icon: CreditCard,
+    },
+    {
+      title: "الحسابات",
+      url: "/accounts",
+      icon: BookOpen,
     },
     {
       title: "تسجيل شركة جديدة",

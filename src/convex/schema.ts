@@ -125,6 +125,15 @@ const schema = defineSchema(
       .index("by_userId", ["userId"])
       .index("by_userId_and_isRead", ["userId", "isRead"])
       .index("by_commitmentId_and_type", ["commitmentId", "type"]),
+
+    // Accounts table
+    accounts: defineTable({
+      name: v.string(),
+      companyId: v.id("companies"),
+      createdBy: v.id("users"),
+    })
+      .index("by_companyId", ["companyId"])
+      .index("by_companyId_and_name", ["companyId", "name"]),
   },
   {
     schemaValidation: true,
