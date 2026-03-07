@@ -24,6 +24,7 @@ import { PaymentDialog } from "@/components/company-detail/PaymentDialog";
 import { CompanySettings } from "@/components/company-detail/CompanySettings";
 import { CompanyUsersSection } from "@/components/company-detail/CompanyUsersSection";
 import { UserEditDialog } from "@/components/company-detail/UserEditDialog";
+import { PermissionsSection } from "@/components/company-detail/PermissionsSection";
 import { formatAmount, formatDate } from "@/lib/utils";
 
 const STATUS_COLORS = {
@@ -150,7 +151,7 @@ export default function CompanyDetail() {
         </div>
 
         <Tabs defaultValue={defaultTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 max-w-[500px]">
+          <TabsList className="grid w-full grid-cols-4 max-w-[650px]">
             <TabsTrigger value="commitments" className="gap-2">
               <FileText className="h-4 w-4" />
               الالتزامات
@@ -158,6 +159,10 @@ export default function CompanyDetail() {
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               المستخدمين
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="gap-2">
+              <Settings className="h-4 w-4" />
+              الصلاحيات
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
@@ -198,6 +203,13 @@ export default function CompanyDetail() {
             <CompanyUsersSection
               companyId={companyId as Id<"companies">}
               isAdmin={isSystemAdmin || isCompanyAdmin}
+            />
+          </TabsContent>
+
+          <TabsContent value="permissions">
+            <PermissionsSection
+              companyId={companyId as Id<"companies">}
+              isAdmin={isAdmin}
             />
           </TabsContent>
 

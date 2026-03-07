@@ -134,6 +134,29 @@ const schema = defineSchema(
     })
       .index("by_companyId", ["companyId"])
       .index("by_companyId_and_name", ["companyId", "name"]),
+
+    // Positions table - define roles/positions with permissions
+    positions: defineTable({
+      companyId: v.id("companies"),
+      name: v.string(),
+      permissions: v.array(v.string()),
+      createdBy: v.id("users"),
+    })
+      .index("by_companyId", ["companyId"])
+      .index("by_companyId_and_name", ["companyId", "name"]),
+
+    // User positions - link users to positions + individual exceptions
+    userPositions: defineTable({
+      companyId: v.id("companies"),
+      userId: v.id("users"),
+      positionId: v.optional(v.id("positions")),
+      grantedPermissions: v.array(v.string()),
+      revokedPermissions: v.array(v.string()),
+      updatedBy: v.id("users"),
+    })
+      .index("by_companyId", ["companyId"])
+      .index("by_userId", ["userId"])
+      .index("by_companyId_and_userId", ["companyId", "userId"]),
   },
   {
     schemaValidation: true,
