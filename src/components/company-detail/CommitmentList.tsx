@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign, Eye, Edit, Trash2, LayoutGrid, List, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Calendar, DollarSign, Eye, Edit, Trash2, LayoutGrid, List, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Id } from "@/convex/_generated/dataModel";
 import { formatAmount, formatDate, getDaysUntil } from "@/lib/utils";
@@ -91,6 +91,10 @@ export function CommitmentList({
     const saved = localStorage.getItem("commitmentViewMode");
     return (saved as "grid" | "list") || "list";
   });
+
+  // Collapsed state for groups - collapsed by default
+  const [overdueCollapsed, setOverdueCollapsed] = useState(true);
+  const [regularCollapsed, setRegularCollapsed] = useState(true);
 
   // Internal sort state (used when no external sort is provided)
   const [internalSortBy, setInternalSortBy] = useState<SortField>("dueDate");
@@ -469,62 +473,78 @@ export function CommitmentList({
       {/* Overdue Section */}
       {overdueCommitments.length > 0 && (
         <div className="rounded-xl border border-red-200 dark:border-red-900 overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 border-b border-red-200 dark:border-red-900">
-            <TrendingDown className="h-4 w-4 text-red-600" />
-            <h2 className="text-sm font-bold text-red-700 dark:text-red-400">
-              التزامات متأخرة ({overdueCommitments.length})
-            </h2>
+          <div
+            className="flex items-center justify-between gap-2 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 border-b border-red-200 dark:border-red-900 cursor-pointer hover:bg-red-100/60 dark:hover:bg-red-950/50 transition-colors"
+            onClick={() => setOverdueCollapsed(!overdueCollapsed)}
+          >
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-red-600" />
+              <h2 className="text-sm font-bold text-red-700 dark:text-red-400">
+                التزامات متأخرة ({overdueCommitments.length})
+              </h2>
+            </div>
+            {overdueCollapsed ? <ChevronDown className="h-4 w-4 text-red-600" /> : <ChevronUp className="h-4 w-4 text-red-600" />}
           </div>
 
-          {viewMode === "list" ? (
-            <div className="overflow-x-auto">
-              {renderHeaderRow("bg-red-50/80 dark:bg-red-950/20", "text-red-700 dark:text-red-400")}
-              <div className="min-w-max">
-                {overdueCommitments.map((c, i) => renderListRow(c, i))}
+          {!overdueCollapsed && (
+            viewMode === "list" ? (
+              <div className="overflow-x-auto">
+                {renderHeaderRow("bg-red-50/80 dark:bg-red-950/20", "text-red-700 dark:text-red-400")}
+                <div className="min-w-max">
+                  {overdueCommitments.map((c, i) => renderListRow(c, i))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {overdueCommitments.map(renderGridCard)}
-            </div>
+            ) : (
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {overdueCommitments.map(renderGridCard)}
+              </div>
+            )
           )}
         </div>
       )}
 
       {/* Regular Commitments Section */}
       <div className="rounded-xl border border-border overflow-hidden shadow-sm">
-        {overdueCommitments.length > 0 && (
-          <div className="flex items-center gap-2 bg-muted/40 px-4 py-2.5 border-b">
+        <div
+          className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5 border-b cursor-pointer hover:bg-muted/60 transition-colors"
+          onClick={() => setRegularCollapsed(!regularCollapsed)}
+        >
+          <div className="flex items-center gap-2">
             <div className="w-1 h-4 bg-primary rounded-full" />
-            <h2 className="text-sm font-bold text-foreground">الالتزامات القادمة</h2>
+            <h2 className="text-sm font-bold text-foreground">
+              الالتزامات القادمة ({regularCommitments.length})
+            </h2>
           </div>
-        )}
+          {regularCollapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
+        </div>
 
-        {viewMode === "list" ? (
-          <div className="overflow-x-auto">
-            {renderHeaderRow("bg-muted/50", "text-muted-foreground")}
-            <div className="min-w-max">
-              {regularCommitments.map((c, i) => renderListRow(c, i))}
+        {!regularCollapsed && (
+          viewMode === "list" ? (
+            <div className="overflow-x-auto">
+              {renderHeaderRow("bg-muted/50", "text-muted-foreground")}
+              <div className="min-w-max">
+                {regularCommitments.map((c, i) => renderListRow(c, i))}
+                {commitments?.length === 0 && (
+                  <div className="text-center py-16 px-8">
+                    <div className="text-4xl mb-3">📋</div>
+                    <p className="text-muted-foreground font-medium">لا توجد التزامات</p>
+                    <p className="text-muted-foreground text-sm mt-1">ابدأ بإضافة التزام جديد</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {regularCommitments.map(renderGridCard)}
               {commitments?.length === 0 && (
-                <div className="text-center py-16 px-8">
+                <div className="text-center py-16 col-span-2">
                   <div className="text-4xl mb-3">📋</div>
                   <p className="text-muted-foreground font-medium">لا توجد التزامات</p>
                   <p className="text-muted-foreground text-sm mt-1">ابدأ بإضافة التزام جديد</p>
                 </div>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {regularCommitments.map(renderGridCard)}
-            {commitments?.length === 0 && (
-              <div className="text-center py-16 col-span-2">
-                <div className="text-4xl mb-3">📋</div>
-                <p className="text-muted-foreground font-medium">لا توجد التزامات</p>
-                <p className="text-muted-foreground text-sm mt-1">ابدأ بإضافة التزام جديد</p>
-              </div>
-            )}
-          </div>
+          )
         )}
       </div>
     </div>
