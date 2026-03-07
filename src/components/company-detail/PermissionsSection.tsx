@@ -26,12 +26,15 @@ function PermissionCheckboxGroup({
   selected,
   onChange,
   disabled = false,
+  readonlyHighlight = [],
 }: {
   permissions: typeof PERMISSION_GROUPS;
   selected: string[];
   onChange: (perms: string[]) => void;
   disabled?: boolean;
+  readonlyHighlight?: string[];
 }) {
+  // All collapsed by default
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const toggle = (perm: string) => {
@@ -57,7 +60,9 @@ function PermissionCheckboxGroup({
       {Object.entries(permissions).map(([group, perms]) => {
         const allSelected = perms.every((p) => selected.includes(p));
         const someSelected = perms.some((p) => selected.includes(p));
-        const isExpanded = expanded[group] !== false;
+        // Default collapsed (undefined = collapsed)
+        const isExpanded = expanded[group] === true;
+        const highlightCount = perms.filter((p) => readonlyHighlight.includes(p)).length;
 
         return (
           <div key={group} className="border rounded-lg overflow-hidden">
@@ -79,24 +84,38 @@ function PermissionCheckboxGroup({
                     {perms.filter((p) => selected.includes(p)).length}/{perms.length}
                   </Badge>
                 )}
+                {highlightCount > 0 && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+                    {highlightCount} من المنصب
+                  </Badge>
+                )}
               </div>
               {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
             {isExpanded && (
               <div className="p-3 grid grid-cols-2 gap-2">
-                {perms.map((perm) => (
-                  <div key={perm} className="flex items-center gap-2">
-                    <Checkbox
-                      id={perm}
-                      checked={selected.includes(perm)}
-                      onCheckedChange={() => !disabled && toggle(perm)}
-                      disabled={disabled}
-                    />
-                    <Label htmlFor={perm} className="text-sm cursor-pointer">
-                      {PERMISSION_LABELS[perm] || perm}
-                    </Label>
-                  </div>
-                ))}
+                {perms.map((perm) => {
+                  const fromPosition = readonlyHighlight.includes(perm);
+                  return (
+                    <div
+                      key={perm}
+                      className={`flex items-center gap-2 rounded px-1 py-0.5 ${fromPosition ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                    >
+                      <Checkbox
+                        id={perm}
+                        checked={selected.includes(perm)}
+                        onCheckedChange={() => !disabled && toggle(perm)}
+                        disabled={disabled}
+                      />
+                      <Label htmlFor={perm} className="text-sm cursor-pointer flex items-center gap-1">
+                        {PERMISSION_LABELS[perm] || perm}
+                        {fromPosition && (
+                          <span className="text-xs text-blue-500 font-normal">(منصب)</span>
+                        )}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -246,11 +265,18 @@ function UserPermissionsDialog({
                 ))}
               </SelectContent>
             </Select>
-            {selectedPosition && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {positionPerms.map((p) => (
-                  <Badge key={p} variant="secondary" className="text-xs">{PERMISSION_LABELS[p] || p}</Badge>
-                ))}
+            {selectedPosition && positionPerms.length > 0 && (
+              <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                  صلاحيات المنصب ({positionPerms.length}):
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {positionPerms.map((p) => (
+                    <Badge key={p} variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                      {PERMISSION_LABELS[p] || p}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -268,19 +294,31 @@ function UserPermissionsDialog({
               </TabsTrigger>
             </TabsList>
             <TabsContent value="granted" className="mt-3">
-              <p className="text-sm text-muted-foreground mb-3">صلاحيات إضافية تُمنح لهذا المستخدم بغض النظر عن منصبه</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                صلاحيات إضافية تُمنح لهذا المستخدم بغض النظر عن منصبه.
+                {positionPerms.length > 0 && (
+                  <span className="text-blue-600 dark:text-blue-400"> الصلاحيات المميزة بـ (منصب) هي صلاحيات المنصب الحالي.</span>
+                )}
+              </p>
               <PermissionCheckboxGroup
                 permissions={PERMISSION_GROUPS}
                 selected={grantedPerms}
                 onChange={setGrantedPerms}
+                readonlyHighlight={positionPerms}
               />
             </TabsContent>
             <TabsContent value="revoked" className="mt-3">
-              <p className="text-sm text-muted-foreground mb-3">صلاحيات تُسحب من هذا المستخدم حتى لو كانت ضمن منصبه</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                صلاحيات تُسحب من هذا المستخدم حتى لو كانت ضمن منصبه.
+                {positionPerms.length > 0 && (
+                  <span className="text-blue-600 dark:text-blue-400"> الصلاحيات المميزة بـ (منصب) هي صلاحيات المنصب الحالي.</span>
+                )}
+              </p>
               <PermissionCheckboxGroup
                 permissions={PERMISSION_GROUPS}
                 selected={revokedPerms}
                 onChange={setRevokedPerms}
+                readonlyHighlight={positionPerms}
               />
             </TabsContent>
             <TabsContent value="effective" className="mt-3">
