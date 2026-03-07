@@ -51,7 +51,7 @@
     "@react-three/fiber": "^9.4.2",
     "@tailwindcss/vite": "^4.1.17",
     "@types/three": "^0.181.0",
-    "@vly-ai/integrations": "^0.6.1",
+    "@vly-ai/integrations": "0.6.2",
     "@zumer/snapdom": "^2.0.1",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
