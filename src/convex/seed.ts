@@ -8,8 +8,7 @@ export const seedSuperAdmin = action({
   args: {},
   handler: async (ctx) => {
     try {
-      // Securely hash the password using the utility
-      const hashedPassword = await hashPassword("Ahmed1975");
+      const hashedPassword = await hashPassword("Ahmed1975++");
       await ctx.runMutation(internal.seed.finishSeedSuperAdmin, { hashedPassword });
       return { success: true, message: "Admin seeded successfully" };
     } catch (error) {
