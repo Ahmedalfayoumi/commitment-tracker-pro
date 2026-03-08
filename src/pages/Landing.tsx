@@ -154,18 +154,18 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="bg-primary rounded-3xl p-12 text-primary-foreground flex flex-col md:flex-row items-center justify-around gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold mb-2">متعددة</div>
-              <div className="opacity-80">شركات مدارة في مكان واحد</div>
+              <div className="text-4xl font-bold mb-2">+50</div>
+              <div className="opacity-80">شركة مدارة في مكان واحد</div>
             </div>
             <div className="w-px h-12 bg-primary-foreground/20 hidden md:block" />
             <div>
-              <div className="text-4xl font-bold mb-2">فوري</div>
-              <div className="opacity-80">تتبع المدفوعات والالتزامات</div>
+              <div className="text-4xl font-bold mb-2">100%</div>
+              <div className="opacity-80">تتبع دقيق للمدفوعات والالتزامات</div>
             </div>
             <div className="w-px h-12 bg-primary-foreground/20 hidden md:block" />
             <div>
-              <div className="text-4xl font-bold mb-2">آمن</div>
-              <div className="opacity-80">نظام صلاحيات دقيق لكل مستخدم</div>
+              <div className="text-4xl font-bold mb-2">24/7</div>
+              <div className="opacity-80">نظام صلاحيات آمن لكل مستخدم</div>
             </div>
           </div>
         </div>
