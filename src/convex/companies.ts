@@ -635,3 +635,15 @@ export const generateUploadUrl = mutation({
     return await ctx.storage.generateUploadUrl();
   },
 });
+
+// Public query to get total company count (excludes Master Company)
+export const getPublicCompanyCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const companies = await ctx.db
+      .query("companies")
+      .take(500);
+    // Exclude the Master Company used for system admin
+    return companies.filter(c => c.companyType !== "Master").length;
+  },
+});

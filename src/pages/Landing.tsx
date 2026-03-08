@@ -18,10 +18,13 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const companyCount = useQuery(api.companies.getPublicCompanyCount);
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -110,7 +113,7 @@ export default function Landing() {
               },
               {
                 title: "نظام مدفوعات متطور",
-                desc: "سجل المدفوعات وحدث حالة الالتزامات تلقائياً (مدفوع، مدفوع جزئياً، مؤجل).",
+                desc: "سجل المدفوعات وحدد حالة الالتزامات تلقائياً (مدفوع، مدفوع جزئياً، مؤجل).",
                 icon: Wallet,
               },
               {
@@ -154,7 +157,9 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="bg-primary rounded-3xl p-12 text-primary-foreground flex flex-col md:flex-row items-center justify-around gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold mb-2">+50</div>
+              <div className="text-4xl font-bold mb-2">
+                {companyCount !== undefined ? `+${companyCount}` : "+..."}
+              </div>
               <div className="opacity-80">شركة مدارة في مكان واحد</div>
             </div>
             <div className="w-px h-12 bg-primary-foreground/20 hidden md:block" />
