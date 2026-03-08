@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
-import { FileText, Plus, Search, Upload, Download, Eye, Calendar, X, ChevronDown, ArrowRight, Building2, Users, Settings } from "lucide-react";
+import { FileText, Plus, Search, Upload, Download, Eye, Calendar, X, ChevronDown, ArrowRight, Building2, Users, Settings, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -256,7 +256,7 @@ export default function Commitments() {
                 المستخدمين
               </TabsTrigger>
               <TabsTrigger value="permissions" className="gap-2">
-                <Settings className="h-4 w-4" />
+                <Shield className="h-4 w-4" />
                 الصلاحيات
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-2">
